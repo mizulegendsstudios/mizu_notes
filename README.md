@@ -27,21 +27,25 @@ Un bloc de notas SPA (Single Page Application) optimizado para dispositivos móv
 - **Limitación actual:** La búsqueda puede ser lenta en archivos grandes
 
 ### ⌨️ **Atajos de teclado (PC)**
-- `Ctrl+N` - Nueva pestaña
-- `Ctrl+W` - Cerrar pestaña actual
 - `Ctrl+F` - Buscar
 - `Ctrl+H` - Buscar y reemplazar
 - `F3` - Siguiente resultado de búsqueda
 - `Shift+F3` - Resultado anterior de búsqueda
-- `Ctrl+S` - Guardar cambios (con feedback visual)
 - `F1` - Mostrar ayuda
 - `Escape` - Cerrar búsqueda o ayuda
+
+**Nota:** Los atajos Ctrl+N y Ctrl+W se removieron temporalmente por conflictos con el navegador.
 
 ### 💾 **Persistencia y exportación**
 - Guardado automático en localStorage
 - Exportación a múltiples formatos (.txt, .html, .css, .js, .md)
 - Nombres de archivo personalizables
 - Sin pérdida de datos
+
+### 🔗 **Funcionalidades de texto**
+- Conversión de texto seleccionado en hipervínculos
+- Enlaces se abren en nueva pestaña
+- Estilo visual distintivo para enlaces
 
 ### 🎨 **Interfaz optimizada para móviles**
 - Tema oscuro elegante
@@ -93,6 +97,7 @@ php -S localhost:8000
 ### ⚠️ **TV (Soporte básico)**
 - Navegadores web de Smart TV
 - Controles remotos con 5 botones básicos
+- **Limitación:** La exportación de archivos puede no funcionar en algunas TV debido a restricciones del sistema
 
 ## 🛠️ Tecnologías utilizadas
 
