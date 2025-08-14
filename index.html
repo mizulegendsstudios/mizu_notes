@@ -33,6 +33,36 @@
       background: #333;
       padding: 8px;
       align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .app-info {
+      display: flex;
+      align-items: center;
+      margin-right: 12px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .app-info .app-name {
+      font-weight: bold;
+      color: #fff;
+      margin-right: 8px;
+    }
+
+    .app-info .app-version {
+      color: #ccc;
+    }
+
+    .app-info .help-link {
+      color: #4CAF50;
+      text-decoration: none;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+
+    .app-info .help-link:hover {
+      text-decoration: underline;
     }
 
     #tabs {
@@ -157,10 +187,73 @@
       background: #555;
       color: white;
       border: none;
-      padding: 6px;
-      font-size: 14px;
+      padding: 8px 12px;
+      font-size: 16px;
       border-radius: 4px;
       outline: none;
+      min-height: 44px; /* Tamaño mínimo para touch */
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    button:active {
+      background: #444;
+      transform: scale(0.98);
+    }
+
+    /* Optimización para móviles */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px;
+      }
+      
+      .app-info {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      
+      #tabs {
+        margin-bottom: 8px;
+      }
+      
+      .tab {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      
+      .tab-close {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+      }
+      
+      #searchBar {
+        padding: 12px;
+        gap: 12px;
+      }
+      
+      #searchBar input {
+        font-size: 16px;
+        padding: 8px 12px;
+      }
+      
+      #searchBar button {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
+      
+      footer {
+        padding: 12px;
+        gap: 12px;
+      }
+      
+      input, select, button {
+        font-size: 16px;
+        padding: 10px 16px;
+      }
     }
 
     .shortcuts-info {
@@ -213,6 +306,11 @@
 <body>
   <div id="app">
     <header>
+      <div class="app-info">
+        <span class="app-name">Mizu Notes</span>
+        <span class="app-version">v0.2.0</span>
+        <a class="help-link" onclick="showShortcuts()">❓ Ayuda</a>
+      </div>
       <div id="tabs"></div>
       <button id="newTab">➕ Nueva pestaña</button>
     </header>
@@ -456,8 +554,9 @@
     function replaceCurrent() {
       if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
       
+      const query = searchInput.value;
       const start = searchResults[currentSearchIndex];
-      const end = start + searchQuery.length;
+      const end = start + query.length;
       const replacement = replaceInput.value;
       
       const before = editor.value.substring(0, start);
@@ -465,7 +564,7 @@
       editor.value = before + replacement + after;
       
       // Actualizar posiciones de búsqueda
-      const lengthDiff = replacement.length - searchQuery.length;
+      const lengthDiff = replacement.length - query.length;
       for (let i = currentSearchIndex + 1; i < searchResults.length; i++) {
         searchResults[i] += lengthDiff;
       }
@@ -509,6 +608,17 @@
       overlay.style.display = "none";
     }
 
+    function showSaveFeedback() {
+      const originalText = exportBtn.textContent;
+      exportBtn.textContent = "✅ Guardado";
+      exportBtn.style.background = "#4CAF50";
+      
+      setTimeout(() => {
+        exportBtn.textContent = originalText;
+        exportBtn.style.background = "#555";
+      }, 1000);
+    }
+
     // Event listeners
     newTabBtn.onclick = () => {
       saveCurrentContent();
@@ -534,6 +644,12 @@
 
     // Búsqueda
     searchInput.oninput = performSearch;
+    searchInput.onkeydown = (e) => {
+      // Prevenir que se pierda el foco al escribir
+      if (e.key === 'Escape') {
+        hideSearchBar();
+      }
+    };
     searchNextBtn.onclick = nextSearchResult;
     searchPrevBtn.onclick = prevSearchResult;
     replaceBtn.onclick = replaceCurrent;
@@ -547,29 +663,37 @@
 
     // Atajos de teclado
     document.addEventListener('keydown', (e) => {
+      // Prevenir comportamiento del navegador para atajos comunes
       if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
+        switch (e.key.toLowerCase()) {
           case 'n':
             e.preventDefault();
+            e.stopPropagation();
             newTabBtn.click();
             break;
           case 'w':
             e.preventDefault();
+            e.stopPropagation();
             if (tabs.length > 1) {
               closeTab(currentTab);
             }
             break;
           case 'f':
             e.preventDefault();
+            e.stopPropagation();
             showSearchBar(false);
             break;
           case 'h':
             e.preventDefault();
+            e.stopPropagation();
             showSearchBar(true);
             break;
           case 's':
             e.preventDefault();
+            e.stopPropagation();
             saveCurrentContent();
+            // Mostrar feedback visual de guardado
+            showSaveFeedback();
             break;
         }
       } else {

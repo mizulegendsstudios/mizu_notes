@@ -1,8 +1,16 @@
 # Mizu Notes 📝
 
-Un bloc de notas SPA (Single Page Application) moderno y funcional con pestañas múltiples, guardado local y funcionalidades avanzadas de edición.
+Un bloc de notas SPA (Single Page Application) optimizado para dispositivos móviles con pestañas múltiples, guardado local y funcionalidades básicas de edición.
 
-## ✨ Características
+## 🎯 **Prioridad del proyecto**
+
+**Mizu Notes está diseñado principalmente para dispositivos móviles** con soporte secundario para PC y TV. La interfaz prioriza:
+
+- 📱 **Pantallas táctiles** - Botones grandes y fáciles de tocar
+- 🎮 **Controles de TV** - Navegación con 5 botones básicos (4 direcciones + 1 acción)
+- 💻 **Compatibilidad PC** - Atajos de teclado como complemento
+
+## ✨ Características actuales
 
 ### 🗂️ **Gestión de pestañas**
 - Múltiples pestañas para trabajar con varios documentos
@@ -11,21 +19,21 @@ Un bloc de notas SPA (Single Page Application) moderno y funcional con pestañas
 - Navegación fluida entre pestañas
 - Nombres personalizables para cada pestaña
 
-### 🔍 **Búsqueda y reemplazo**
+### 🔍 **Búsqueda y reemplazo** ⚠️
 - Búsqueda en tiempo real
 - Navegación entre resultados encontrados
 - Reemplazo individual o masivo
 - Búsqueda insensible a mayúsculas/minúsculas
-- Auto-scroll a los resultados
+- **Limitación actual:** La búsqueda puede ser lenta en archivos grandes
 
-### ⌨️ **Atajos de teclado**
+### ⌨️ **Atajos de teclado (PC)**
 - `Ctrl+N` - Nueva pestaña
 - `Ctrl+W` - Cerrar pestaña actual
 - `Ctrl+F` - Buscar
 - `Ctrl+H` - Buscar y reemplazar
 - `F3` - Siguiente resultado de búsqueda
 - `Shift+F3` - Resultado anterior de búsqueda
-- `Ctrl+S` - Guardar cambios
+- `Ctrl+S` - Guardar cambios (con feedback visual)
 - `F1` - Mostrar ayuda
 - `Escape` - Cerrar búsqueda o ayuda
 
@@ -35,11 +43,12 @@ Un bloc de notas SPA (Single Page Application) moderno y funcional con pestañas
 - Nombres de archivo personalizables
 - Sin pérdida de datos
 
-### 🎨 **Interfaz moderna**
+### 🎨 **Interfaz optimizada para móviles**
 - Tema oscuro elegante
+- Botones grandes para pantallas táctiles (mínimo 44px)
 - Diseño responsive
-- Interfaz intuitiva y limpia
-- Fuente monoespaciada para mejor legibilidad del código
+- Información del programa visible (nombre, versión, ayuda)
+- Feedback visual para acciones importantes
 
 ## 🚀 Instalación
 
@@ -69,39 +78,45 @@ php -S localhost:8000
 
 ## 📱 Compatibilidad
 
-- ✅ Chrome/Chromium (recomendado)
-- ✅ Firefox
-- ✅ Safari
-- ✅ Edge
-- ✅ Navegadores móviles modernos
+### ✅ **Dispositivos móviles (Prioridad)**
+- Chrome Mobile
+- Safari iOS
+- Firefox Mobile
+- Samsung Internet
+
+### ✅ **PC (Soporte secundario)**
+- Chrome/Chromium
+- Firefox
+- Safari
+- Edge
+
+### ⚠️ **TV (Soporte básico)**
+- Navegadores web de Smart TV
+- Controles remotos con 5 botones básicos
 
 ## 🛠️ Tecnologías utilizadas
 
 - **HTML5** - Estructura semántica
-- **CSS3** - Estilos modernos y responsive
+- **CSS3** - Estilos responsive y optimizados para touch
 - **JavaScript ES6+** - Funcionalidad completa
 - **localStorage** - Persistencia de datos
 - **File API** - Exportación de archivos
 
-## 📋 Funcionalidades técnicas
+## ⚠️ **Limitaciones actuales**
 
-### Sistema de pestañas
-- Gestión dinámica de pestañas
-- Persistencia de estado entre sesiones
-- Manejo inteligente de índices
-- Protección contra pérdida de datos
+### Problemas conocidos:
+1. **Búsqueda lenta** - En archivos muy grandes (>10,000 líneas)
+2. **Atajos de teclado** - Solo funcionan en PC, no en móviles
+3. **localStorage** - Límite de ~5-10MB por dominio
+4. **Sin sincronización** - Los datos solo se guardan localmente
 
-### Motor de búsqueda
-- Búsqueda en tiempo real
-- Algoritmo de búsqueda eficiente
-- Actualización dinámica de resultados
-- Manejo de posiciones de texto
-
-### Sistema de guardado
-- Guardado automático en tiempo real
-- Compresión de datos en localStorage
-- Manejo de errores robusto
-- Backup automático de sesión
+### Funcionalidades pendientes:
+- [ ] Búsqueda con expresiones regulares
+- [ ] Resaltado de sintaxis
+- [ ] Temas claro/oscuro
+- [ ] Estadísticas del documento
+- [ ] Deshacer/Rehacer
+- [ ] Sincronización en la nube
 
 ## 🔧 Personalización
 
@@ -117,16 +132,16 @@ Puedes agregar más formatos de exportación modificando el array de opciones en
 ## 📈 Roadmap
 
 ### v0.3.0 (Próximamente)
+- [ ] Optimización de búsqueda para archivos grandes
 - [ ] Temas claro/oscuro
 - [ ] Estadísticas del documento (palabras, líneas, caracteres)
-- [ ] Deshacer/Rehacer
-- [ ] Configuración de fuente personalizable
+- [ ] Mejor soporte para controles de TV
 
 ### v0.4.0
-- [ ] Drag & Drop para reordenar pestañas
-- [ ] Menú contextual (click derecho)
 - [ ] Búsqueda con expresiones regulares
 - [ ] Resaltado de sintaxis para lenguajes de programación
+- [ ] Menú contextual (click derecho)
+- [ ] Drag & Drop para reordenar pestañas
 
 ### v1.0.0
 - [ ] Sincronización en la nube
@@ -144,6 +159,12 @@ Puedes agregar más formatos de exportación modificando el array de opciones en
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
+### Prioridades para contribuciones:
+1. **Optimización móvil** - Mejorar experiencia en pantallas táctiles
+2. **Soporte TV** - Mejorar navegación con controles remotos
+3. **Rendimiento** - Optimizar búsqueda y manejo de archivos grandes
+4. **Accesibilidad** - Mejorar soporte para lectores de pantalla
+
 ## 📄 Licencia
 
 Este proyecto está bajo la Licencia AGPL-3.0. Ver el archivo [LICENSE](LICENSE) para más detalles.
@@ -153,6 +174,7 @@ Este proyecto está bajo la Licencia AGPL-3.0. Ver el archivo [LICENSE](LICENSE)
 - Inspirado en editores de texto modernos
 - Comunidad de desarrolladores web
 - Usuarios que han probado y reportado bugs
+- Filosofía de los 5 botones básicos de Atari
 
 ## 📞 Soporte
 
@@ -165,3 +187,5 @@ Si encuentras algún problema o tienes sugerencias:
 ---
 
 **Mizu Notes v0.2.0** - Desarrollado por Moises Núñez con ❤️ para la comunidad de desarrolladores
+
+*Optimizado para móviles, compatible con PC y TV*
