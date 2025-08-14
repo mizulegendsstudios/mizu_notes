@@ -19,22 +19,22 @@ Un bloc de notas SPA (Single Page Application) optimizado para dispositivos móv
 - Navegación fluida entre pestañas
 - Nombres personalizables para cada pestaña
 
-### 🔍 **Búsqueda y reemplazo** ⚠️
+### 🔍 **Búsqueda** ✅
 - Búsqueda en tiempo real
 - Navegación entre resultados encontrados
-- Reemplazo individual o masivo
 - Búsqueda insensible a mayúsculas/minúsculas
 - **Limitación actual:** La búsqueda puede ser lenta en archivos grandes
 
+**Nota:** La funcionalidad de reemplazo estará disponible en futuras versiones.
+
 ### ⌨️ **Atajos de teclado (PC)**
 - `Ctrl+F` - Buscar
-- `Ctrl+H` - Buscar y reemplazar
 - `F3` - Siguiente resultado de búsqueda
 - `Shift+F3` - Resultado anterior de búsqueda
 - `F1` - Mostrar ayuda
 - `Escape` - Cerrar búsqueda o ayuda
 
-**Nota:** Los atajos Ctrl+N y Ctrl+W se removieron temporalmente por conflictos con el navegador.
+**Nota:** Los atajos Ctrl+N y Ctrl+W se removieron temporalmente por conflictos con el navegador. La funcionalidad de reemplazo estará disponible en futuras versiones.
 
 ### 💾 **Persistencia y exportación**
 - Guardado automático en localStorage
