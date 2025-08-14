@@ -1,4 +1,4 @@
-# ZeroPad 📝
+# Mizu Notes 📝
 
 Un bloc de notas SPA (Single Page Application) moderno y funcional con pestañas múltiples, guardado local y funcionalidades avanzadas de edición.
 
@@ -50,8 +50,8 @@ Un bloc de notas SPA (Single Page Application) moderno y funcional con pestañas
 
 ### Opción 2: Clonar el repositorio
 ```bash
-git clone https://github.com/tu-usuario/zeropad.git
-cd zeropad
+git clone https://github.com/mizulegendsstudios/mizu_notes.git
+cd mizu_notes
 # Abre index.html en tu navegador
 ```
 
@@ -158,10 +158,10 @@ Este proyecto está bajo la Licencia AGPL-3.0. Ver el archivo [LICENSE](LICENSE)
 
 Si encuentras algún problema o tienes sugerencias:
 
-- Abre un [issue](https://github.com/tu-usuario/zeropad/issues)
+- Abre un [issue](https://github.com/mizulegendsstudios/mizu_notes/issues)
 - Contacta al desarrollador
 - Revisa la documentación
 
 ---
 
-**ZeroPad v0.2.0** - Hecho con ❤️ para la comunidad de desarrolladores
+**Mizu Notes v0.2.0** - Desarrollado por Moises Núñez con ❤️ para la comunidad de desarrolladores
