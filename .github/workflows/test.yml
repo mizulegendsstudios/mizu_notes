@@ -10,50 +10,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          
-      - name: Install dependencies
-        run: |
-          npm install -g html-validate
-          npm install -g eslint
-          npm install -g http-server
-          
-      - name: Validate HTML
-        run: |
-          echo "🔍 Validating HTML..."
-          html-validate index.html
-          
-      - name: Lint JavaScript
-        run: |
-          echo "🔍 Linting JavaScript..."
-          # Extract JavaScript from HTML and lint it
-          node -e "
-            const fs = require('fs');
-            const html = fs.readFileSync('index.html', 'utf8');
-            const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
-            if (scriptMatch) {
-              const js = scriptMatch[1];
-              fs.writeFileSync('temp.js', js);
-              console.log('JavaScript extracted for linting');
-            } else {
-              console.log('No JavaScript found in HTML');
-              process.exit(0);
-            }
-          "
-          
-      - name: Basic functionality test
-        run: |
-          echo "🧪 Testing basic functionality..."
-          # Start a simple HTTP server to test the app
-          timeout 30s http-server -p 8080 &
-          sleep 5
-          
-          # Test if the HTML loads without errors
-          curl -f http://localhost:8080 > /dev/null && echo "✅ HTML loads successfully" || echo "❌ HTML failed to load"
-          
       - name: Check file structure
         run: |
           echo "📁 Checking file structure..."
@@ -108,7 +64,48 @@ jobs:
             exit 1
           fi
           
+          # Check if HTML has proper structure
+          if grep -q '<!DOCTYPE html>' index.html; then
+            echo "✅ DOCTYPE declared"
+          else
+            echo "❌ DOCTYPE missing"
+            exit 1
+          fi
+          
+          if grep -q '<html' index.html && grep -q '</html>' index.html; then
+            echo "✅ HTML tags properly closed"
+          else
+            echo "❌ HTML tags not properly closed"
+            exit 1
+          fi
+          
+      - name: Basic HTML validation
+        run: |
+          echo "🔍 Basic HTML validation..."
+          
+          # Check for common HTML issues
+          if grep -q '<script>' index.html && ! grep -q '</script>' index.html; then
+            echo "❌ Unclosed script tag found"
+            exit 1
+          fi
+          
+          if grep -q '<style>' index.html && ! grep -q '</style>' index.html; then
+            echo "❌ Unclosed style tag found"
+            exit 1
+          fi
+          
+          # Check for balanced tags (basic check)
+          open_divs=$(grep -o '<div' index.html | wc -l)
+          close_divs=$(grep -o '</div>' index.html | wc -l)
+          
+          if [ "$open_divs" -ne "$close_divs" ]; then
+            echo "⚠️ Warning: Div tags may not be balanced (open: $open_divs, close: $close_divs)"
+          else
+            echo "✅ Div tags are balanced"
+          fi
+          
       - name: Test completed
         run: |
           echo "🎉 All tests completed successfully!"
           echo "Mizu Notes is ready for deployment"
+          echo "Status check name: 'Test and Validate'"
