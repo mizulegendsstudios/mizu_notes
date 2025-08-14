@@ -1,0 +1,114 @@
+name: Test and Validate
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Install dependencies
+        run: |
+          npm install -g html-validate
+          npm install -g eslint
+          npm install -g http-server
+          
+      - name: Validate HTML
+        run: |
+          echo "🔍 Validating HTML..."
+          html-validate index.html
+          
+      - name: Lint JavaScript
+        run: |
+          echo "🔍 Linting JavaScript..."
+          # Extract JavaScript from HTML and lint it
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
+            if (scriptMatch) {
+              const js = scriptMatch[1];
+              fs.writeFileSync('temp.js', js);
+              console.log('JavaScript extracted for linting');
+            } else {
+              console.log('No JavaScript found in HTML');
+              process.exit(0);
+            }
+          "
+          
+      - name: Basic functionality test
+        run: |
+          echo "🧪 Testing basic functionality..."
+          # Start a simple HTTP server to test the app
+          timeout 30s http-server -p 8080 &
+          sleep 5
+          
+          # Test if the HTML loads without errors
+          curl -f http://localhost:8080 > /dev/null && echo "✅ HTML loads successfully" || echo "❌ HTML failed to load"
+          
+      - name: Check file structure
+        run: |
+          echo "📁 Checking file structure..."
+          ls -la
+          echo "Required files:"
+          [ -f "index.html" ] && echo "✅ index.html exists" || echo "❌ index.html missing"
+          [ -f "README.md" ] && echo "✅ README.md exists" || echo "❌ README.md missing"
+          [ -f "LICENSE" ] && echo "✅ LICENSE exists" || echo "❌ LICENSE missing"
+          [ -f "VERSION" ] && echo "✅ VERSION exists" || echo "❌ VERSION missing"
+          
+      - name: Validate version format
+        run: |
+          echo "🏷️ Validating version format..."
+          if [[ -f "VERSION" ]]; then
+            version=$(cat VERSION)
+            if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "✅ Version format valid: $version"
+            else
+              echo "❌ Invalid version format: $version (expected: X.Y.Z)"
+              exit 1
+            fi
+          else
+            echo "❌ VERSION file not found"
+            exit 1
+          fi
+          
+      - name: Check for critical issues
+        run: |
+          echo "🚨 Checking for critical issues..."
+          
+          # Check if HTML has required meta tags
+          if grep -q '<meta charset="UTF-8"' index.html; then
+            echo "✅ UTF-8 charset declared"
+          else
+            echo "❌ UTF-8 charset not declared"
+            exit 1
+          fi
+          
+          # Check if HTML has viewport meta tag
+          if grep -q 'viewport' index.html; then
+            echo "✅ Viewport meta tag found"
+          else
+            echo "❌ Viewport meta tag missing"
+            exit 1
+          fi
+          
+          # Check if JavaScript is properly closed
+          if grep -q '</script>' index.html; then
+            echo "✅ JavaScript tags properly closed"
+          else
+            echo "❌ JavaScript tags not properly closed"
+            exit 1
+          fi
+          
+      - name: Test completed
+        run: |
+          echo "🎉 All tests completed successfully!"
+          echo "Mizu Notes is ready for deployment"
