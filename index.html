@@ -314,16 +314,13 @@
         <span class="app-version">v0.2.0</span>
       </div>
       <div id="tabs"></div>
-      <button id="newTab">➕ Nueva pestaña</button>
+      <button id="newTab" title="Nueva pestaña">➕</button>
     </header>
     <main>
       <div id="searchBar">
         <input type="text" id="searchInput" placeholder="Buscar..." />
-        <input type="text" id="replaceInput" placeholder="Reemplazar con..." />
         <button id="searchPrev">⬆️ Anterior</button>
         <button id="searchNext">⬇️ Siguiente</button>
-        <button id="replaceBtn">🔄 Reemplazar</button>
-        <button id="replaceAllBtn">🔄 Reemplazar todo</button>
         <button id="closeSearch">✕</button>
         <span class="search-info" id="searchInfo"></span>
       </div>
@@ -350,10 +347,6 @@
     <div class="shortcut">
       <span>Buscar</span>
       <span class="key">Ctrl+F</span>
-    </div>
-    <div class="shortcut">
-      <span>Reemplazar</span>
-      <span class="key">Ctrl+H</span>
     </div>
     <div class="shortcut">
       <span>Siguiente resultado</span>
@@ -458,23 +451,13 @@
       }
     }
 
-    function showSearchBar(replaceMode = false) {
+    function showSearchBar() {
       searchBar.classList.add("active");
       // Prevenir que el editor capture el foco
       setTimeout(() => {
         searchInput.focus();
         searchInput.select();
       }, 100);
-      
-      if (replaceMode) {
-        replaceInput.style.display = "inline-block";
-        replaceBtn.style.display = "inline-block";
-        replaceAllBtn.style.display = "inline-block";
-      } else {
-        replaceInput.style.display = "none";
-        replaceBtn.style.display = "none";
-        replaceAllBtn.style.display = "none";
-      }
     }
 
     function hideSearchBar() {
@@ -487,6 +470,8 @@
 
     function performSearch() {
       const query = searchInput.value;
+      searchQuery = query; // Guardar la query globalmente
+      
       if (!query) {
         searchResults = [];
         currentSearchIndex = -1;
@@ -617,28 +602,29 @@
     }
 
     function createHyperlink() {
-      const selection = window.getSelection();
-      if (!selection.toString()) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      
+      if (start === end) {
         alert("Selecciona el texto que quieres convertir en enlace");
         return;
       }
       
+      const selectedText = editor.value.substring(start, end);
       const url = prompt("Ingresa la URL del enlace:");
+      
       if (!url) return;
       
-      const range = selection.getRangeAt(0);
-      const link = document.createElement('a');
-      link.href = url;
-      link.textContent = selection.toString();
-      link.target = "_blank";
-      link.style.color = "#4CAF50";
-      link.style.textDecoration = "underline";
+      const before = editor.value.substring(0, start);
+      const after = editor.value.substring(end);
+      const linkText = `[${selectedText}](${url})`;
       
-      range.deleteContents();
-      range.insertNode(link);
+      editor.value = before + linkText + after;
       
-      // Actualizar el contenido del editor
-      editor.value = editor.innerHTML;
+      // Restaurar el cursor
+      editor.setSelectionRange(start, start + linkText.length);
+      editor.focus();
+      
       saveCurrentContent();
     }
 
@@ -707,12 +693,7 @@
           case 'f':
             e.preventDefault();
             e.stopPropagation();
-            showSearchBar(false);
-            break;
-          case 'h':
-            e.preventDefault();
-            e.stopPropagation();
-            showSearchBar(true);
+            showSearchBar();
             break;
           case 's':
             e.preventDefault();
