@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mizu Notes v0.2.0</title>
+  <meta name="description" content="Bloc de notas SPA con pestañas, guardado local y exportación de archivos.">
+  <meta name="author" content="Moises Núñez">
+  <meta name="license" content="AGPL-3.0">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: monospace;
+      background: #1e1e1e;
+      color: #ccc;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    header {
+      display: flex;
+      background: #333;
+      padding: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .app-info {
+      display: flex;
+      align-items: center;
+      margin-right: 12px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .app-info .app-name {
+      font-weight: bold;
+      color: #fff;
+      margin-right: 8px;
+    }
+
+    .app-info .app-version {
+      color: #ccc;
+    }
+
+    .app-info .help-link {
+      color: #4CAF50;
+      text-decoration: none;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+
+    .app-info .help-link:hover {
+      text-decoration: underline;
+    }
+
+    #tabs {
+      display: flex;
+      flex: 1;
+      overflow-x: auto;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      margin-right: 4px;
+      background: #444;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      position: relative;
+    }
+
+    .tab.active {
+      background: #222;
+      font-weight: bold;
+    }
+
+    .tab-close {
+      margin-left: 8px;
+      background: #666;
+      border: none;
+      color: #ccc;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      line-height: 1;
+      padding: 0;
+      min-height: auto;
+    }
+
+    .tab-close:hover {
+      background: #ff4444;
+      opacity: 1;
+    }
+
+    #newTab {
+      background: #555;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #searchBar {
+      display: none;
+      background: #2a2a2a;
+      padding: 8px;
+      border-bottom: 1px solid #444;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #searchBar.active {
+      display: flex;
+    }
+
+    #searchBar input {
+      flex: 1;
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      padding: 6px 8px;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+
+    #searchBar button {
+      background: #555;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    #searchBar button:hover {
+      background: #666;
+    }
+
+    #searchBar .search-info {
+      color: #999;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+
+    #editor {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      resize: none;
+      background: #1e1e1e;
+      color: #eee;
+      font-size: 14px;
+      outline: none;
+    }
+
+    footer {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      background: #333;
+    }
+
+    input, select, button {
+      background: #555;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 4px;
+      outline: none;
+      min-height: 44px; /* Tamaño mínimo para touch */
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    button:active {
+      background: #444;
+      transform: scale(0.98);
+    }
+
+    /* Optimización para móviles */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px;
+      }
+      
+      .app-info {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      
+      #tabs {
+        margin-bottom: 8px;
+      }
+      
+      .tab {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      
+      .tab-close {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+      }
+      
+      #searchBar {
+        padding: 12px;
+        gap: 12px;
+      }
+      
+      #searchBar input {
+        font-size: 16px;
+        padding: 8px 12px;
+      }
+      
+      #searchBar button {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
+      
+      footer {
+        padding: 12px;
+        gap: 12px;
+      }
+      
+      input, select, button {
+        font-size: 16px;
+        padding: 10px 16px;
+      }
+    }
+
+    .shortcuts-info {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2a2a2a;
+      border: 1px solid #666;
+      border-radius: 8px;
+      padding: 20px;
+      z-index: 1000;
+      display: none;
+      max-width: 400px;
+    }
+
+    .shortcuts-info h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+
+    .shortcuts-info .shortcut {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #444;
+    }
+
+    .shortcuts-info .key {
+      background: #555;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="app-info">
+        <span class="app-name">Mizu Notes</span>
+        <span class="app-version">v0.2.0</span>
+      </div>
+      <div id="tabs"></div>
+      <button id="newTab" title="Nueva pestaña">➕</button>
+    </header>
+    <main>
+      <div id="searchBar">
+        <input type="text" id="searchInput" placeholder="Buscar..." />
+        <button id="searchPrev">⬆️ Anterior</button>
+        <button id="searchNext">⬇️ Siguiente</button>
+        <button id="closeSearch">✕</button>
+        <span class="search-info" id="searchInfo"></span>
+      </div>
+      <textarea id="editor" spellcheck="false"></textarea>
+    </main>
+    <footer>
+      <input type="text" id="filename" placeholder="Nombre de archivo" />
+      <select id="exportType">
+        <option value="txt">.txt</option>
+        <option value="html">.html</option>
+        <option value="css">.css</option>
+        <option value="js">.js</option>
+        <option value="md">.md</option>
+      </select>
+      <button id="exportBtn">⬇️ Exportar</button>
+      <button id="linkBtn">🔗 Enlace</button>
+      <button id="helpBtn">❓ Ayuda</button>
+    </footer>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="shortcuts-info" id="shortcutsInfo">
+    <h3>Atajos de teclado</h3>
+    <div class="shortcut">
+      <span>Buscar</span>
+      <span class="key">Ctrl+F</span>
+    </div>
+    <div class="shortcut">
+      <span>Siguiente resultado</span>
+      <span class="key">F3</span>
+    </div>
+    <div class="shortcut">
+      <span>Resultado anterior</span>
+      <span class="key">Shift+F3</span>
+    </div>
+    <div class="shortcut">
+      <span>Ayuda</span>
+      <span class="key">F1</span>
+    </div>
+    <button id="closeShortcuts" style="margin-top: 15px; width: 100%;">Cerrar</button>
+  </div>
+
+  <script>
+    let tabs = JSON.parse(localStorage.getItem("tabs")) || [];
+    let currentTab = 0;
+    let searchResults = [];
+    let currentSearchIndex = -1;
+    let searchQuery = "";
+    let replaceQuery = "";
+
+    const tabsContainer = document.getElementById("tabs");
+    const editor = document.getElementById("editor");
+    const newTabBtn = document.getElementById("newTab");
+    const exportBtn = document.getElementById("exportBtn");
+    const exportType = document.getElementById("exportType");
+    const filenameInput = document.getElementById("filename");
+    const searchBar = document.getElementById("searchBar");
+    const searchInput = document.getElementById("searchInput");
+    const replaceInput = document.getElementById("replaceInput");
+    const searchPrevBtn = document.getElementById("searchPrev");
+    const searchNextBtn = document.getElementById("searchNext");
+    const replaceBtn = document.getElementById("replaceBtn");
+    const replaceAllBtn = document.getElementById("replaceAllBtn");
+    const closeSearchBtn = document.getElementById("closeSearch");
+    const searchInfo = document.getElementById("searchInfo");
+    const helpBtn = document.getElementById("helpBtn");
+    const linkBtn = document.getElementById("linkBtn");
+    const shortcutsInfo = document.getElementById("shortcutsInfo");
+    const overlay = document.getElementById("overlay");
+    const closeShortcutsBtn = document.getElementById("closeShortcuts");
+
+    function renderTabs() {
+      tabsContainer.innerHTML = "";
+      tabs.forEach((tab, i) => {
+        const tabEl = document.createElement("div");
+        tabEl.className = "tab" + (i === currentTab ? " active" : "");
+        tabEl.textContent = tab.name || `Archivo ${i + 1}`;
+        tabEl.onclick = () => switchTab(i);
+        
+        // Agregar botón de cerrar
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "tab-close";
+        closeBtn.innerHTML = "×";
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          closeTab(i);
+        };
+        
+        tabEl.appendChild(closeBtn);
+        tabsContainer.appendChild(tabEl);
+      });
+      filenameInput.value = tabs[currentTab]?.name || `Archivo${currentTab + 1}`;
+    }
+
+    function switchTab(index) {
+      saveCurrentContent();
+      currentTab = index;
+      editor.value = tabs[currentTab].content;
+      renderTabs();
+      hideSearchBar();
+    }
+
+    function closeTab(index) {
+      if (tabs.length <= 1) {
+        // No cerrar la última pestaña
+        return;
+      }
+      
+      saveCurrentContent();
+      tabs.splice(index, 1);
+      
+      if (currentTab >= tabs.length) {
+        currentTab = tabs.length - 1;
+      } else if (currentTab > index) {
+        currentTab--;
+      }
+      
+      editor.value = tabs[currentTab].content;
+      renderTabs();
+      localStorage.setItem("tabs", JSON.stringify(tabs));
+    }
+
+    function saveCurrentContent() {
+      if (tabs[currentTab]) {
+        tabs[currentTab].content = editor.value;
+        tabs[currentTab].name = filenameInput.value || `Archivo${currentTab + 1}`;
+        localStorage.setItem("tabs", JSON.stringify(tabs));
+      }
+    }
+
+    function showSearchBar() {
+      searchBar.classList.add("active");
+      // Prevenir que el editor capture el foco
+      setTimeout(() => {
+        searchInput.focus();
+        searchInput.select();
+      }, 100);
+    }
+
+    function hideSearchBar() {
+      searchBar.classList.remove("active");
+      searchResults = [];
+      currentSearchIndex = -1;
+      searchQuery = "";
+      replaceQuery = "";
+    }
+
+    function performSearch() {
+      const query = searchInput.value;
+      searchQuery = query; // Guardar la query globalmente
+      
+      if (!query) {
+        searchResults = [];
+        currentSearchIndex = -1;
+        updateSearchInfo();
+        return;
+      }
+
+      const content = editor.value;
+      searchResults = [];
+      let index = 0;
+      
+      while ((index = content.toLowerCase().indexOf(query.toLowerCase(), index)) !== -1) {
+        searchResults.push(index);
+        index += query.length;
+      }
+      
+      currentSearchIndex = searchResults.length > 0 ? 0 : -1;
+      updateSearchInfo();
+      
+      if (currentSearchIndex >= 0) {
+        highlightSearchResult();
+      }
+    }
+
+    function highlightSearchResult() {
+      if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
+      
+      const start = searchResults[currentSearchIndex];
+      const end = start + searchQuery.length;
+      
+      editor.focus();
+      editor.setSelectionRange(start, end);
+      
+      // Scroll to the result
+      const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
+      const lines = editor.value.substring(0, start).split('\n').length - 1;
+      editor.scrollTop = lines * lineHeight;
+    }
+
+    function updateSearchInfo() {
+      if (searchResults.length === 0) {
+        searchInfo.textContent = "No se encontraron resultados";
+      } else {
+        searchInfo.textContent = `${currentSearchIndex + 1} de ${searchResults.length}`;
+      }
+    }
+
+    function nextSearchResult() {
+      if (searchResults.length === 0) return;
+      currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+      updateSearchInfo();
+      highlightSearchResult();
+    }
+
+    function prevSearchResult() {
+      if (searchResults.length === 0) return;
+      currentSearchIndex = currentSearchIndex <= 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+      updateSearchInfo();
+      highlightSearchResult();
+    }
+
+    function replaceCurrent() {
+      if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
+      
+      const query = searchInput.value;
+      const start = searchResults[currentSearchIndex];
+      const end = start + query.length;
+      const replacement = replaceInput.value;
+      
+      const before = editor.value.substring(0, start);
+      const after = editor.value.substring(end);
+      editor.value = before + replacement + after;
+      
+      // Actualizar posiciones de búsqueda
+      const lengthDiff = replacement.length - query.length;
+      for (let i = currentSearchIndex + 1; i < searchResults.length; i++) {
+        searchResults[i] += lengthDiff;
+      }
+      
+      // Remover el resultado actual
+      searchResults.splice(currentSearchIndex, 1);
+      
+      if (searchResults.length === 0) {
+        hideSearchBar();
+      } else {
+        currentSearchIndex = Math.min(currentSearchIndex, searchResults.length - 1);
+        updateSearchInfo();
+        if (currentSearchIndex >= 0) {
+          highlightSearchResult();
+        }
+      }
+      
+      saveCurrentContent();
+    }
+
+    function replaceAll() {
+      const query = searchInput.value;
+      const replacement = replaceInput.value;
+      
+      if (!query) return;
+      
+      const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      editor.value = editor.value.replace(regex, replacement);
+      
+      hideSearchBar();
+      saveCurrentContent();
+    }
+
+    function showShortcuts() {
+      shortcutsInfo.style.display = "block";
+      overlay.style.display = "block";
+    }
+
+    function hideShortcuts() {
+      shortcutsInfo.style.display = "none";
+      overlay.style.display = "none";
+    }
+
+    function showSaveFeedback() {
+      const originalText = exportBtn.textContent;
+      exportBtn.textContent = "✅ Guardado";
+      exportBtn.style.background = "#4CAF50";
+      
+      setTimeout(() => {
+        exportBtn.textContent = originalText;
+        exportBtn.style.background = "#555";
+      }, 1000);
+    }
+
+    function createHyperlink() {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      
+      if (start === end) {
+        alert("Selecciona el texto que quieres convertir en enlace");
+        return;
+      }
+      
+      const selectedText = editor.value.substring(start, end);
+      const url = prompt("Ingresa la URL del enlace:");
+      
+      if (!url) return;
+      
+      const before = editor.value.substring(0, start);
+      const after = editor.value.substring(end);
+      const linkText = `[${selectedText}](${url})`;
+      
+      editor.value = before + linkText + after;
+      
+      // Restaurar el cursor
+      editor.setSelectionRange(start, start + linkText.length);
+      editor.focus();
+      
+      saveCurrentContent();
+    }
+
+    // Event listeners
+    newTabBtn.onclick = () => {
+      saveCurrentContent();
+      tabs.push({ name: `Archivo ${tabs.length + 1}`, content: "" });
+      currentTab = tabs.length - 1;
+      editor.value = "";
+      renderTabs();
+      localStorage.setItem("tabs", JSON.stringify(tabs));
+    };
+
+    editor.oninput = () => saveCurrentContent();
+    filenameInput.oninput = () => saveCurrentContent();
+
+    exportBtn.onclick = () => {
+      const blob = new Blob([editor.value], {
+        type: "text/plain;charset=utf-8"
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${filenameInput.value || "archivo"}.${exportType.value}`;
+      a.click();
+    };
+
+    // Búsqueda
+    searchInput.oninput = performSearch;
+    searchInput.onkeydown = (e) => {
+      // Prevenir que se pierda el foco al escribir
+      if (e.key === 'Escape') {
+        hideSearchBar();
+      }
+    };
+    searchNextBtn.onclick = nextSearchResult;
+    searchPrevBtn.onclick = prevSearchResult;
+    replaceBtn.onclick = replaceCurrent;
+    replaceAllBtn.onclick = replaceAll;
+    closeSearchBtn.onclick = hideSearchBar;
+
+    // Enlace
+    linkBtn.onclick = createHyperlink;
+    
+    // Ayuda
+    helpBtn.onclick = showShortcuts;
+    closeShortcutsBtn.onclick = hideShortcuts;
+    overlay.onclick = hideShortcuts;
+
+    // Atajos de teclado
+    document.addEventListener('keydown', (e) => {
+      // Prevenir comportamiento del navegador para atajos comunes
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'n':
+            e.preventDefault();
+            e.stopPropagation();
+            newTabBtn.click();
+            break;
+          case 'w':
+            e.preventDefault();
+            e.stopPropagation();
+            if (tabs.length > 1) {
+              closeTab(currentTab);
+            }
+            break;
+          case 'f':
+            e.preventDefault();
+            e.stopPropagation();
+            showSearchBar();
+            break;
+          case 's':
+            e.preventDefault();
+            e.stopPropagation();
+            saveCurrentContent();
+            // Mostrar feedback visual de guardado
+            showSaveFeedback();
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case 'F1':
+            e.preventDefault();
+            showShortcuts();
+            break;
+          case 'F3':
+            e.preventDefault();
+            if (searchBar.classList.contains('active')) {
+              nextSearchResult();
+            }
+            break;
+          case 'Escape':
+            if (searchBar.classList.contains('active')) {
+              hideSearchBar();
+            } else if (shortcutsInfo.style.display === 'block') {
+              hideShortcuts();
+            }
+            break;
+        }
+      }
+      
+      // Shift+F3 para búsqueda anterior
+      if (e.key === 'F3' && e.shiftKey) {
+        e.preventDefault();
+        if (searchBar.classList.contains('active')) {
+          prevSearchResult();
+        }
+      }
+    });
+
+    // Inicialización
+    if (tabs.length === 0) {
+      tabs.push({ name: "Archivo 1", content: "" });
+    }
+    editor.value = tabs[currentTab].content;
+    renderTabs();
+  </script>
+</body>
+</html>
