@@ -1,4 +1,13 @@
-// En app.js - actualizar el método initializeStorage
+import { Note } from '../core/Note.js';
+
+export class ApiStorage {
+    constructor(baseURL = 'http://localhost:3000/api') {
+        this.baseURL = baseURL;
+        this.token = null;
+        this.isOnline = false;
+        this.pendingRequests = [];
+    }
+    // En app.js - actualizar el método initializeStorage
 async initializeStorage() {
     // Por defecto usar LocalStorage
     this.storage = new LocalStorage();
@@ -17,4 +26,5 @@ async initializeManagers() {
     if (this.storage.initialize) {
         await this.storage.initialize();
     }
+}
 }
