@@ -12,12 +12,14 @@ Icon?
 *.swp
 *.swo
 
-# Configuración local de editores
-.vscode/
-.idea/
-
 # Cachés
 .cache/
 
 # Configuración local opcional
 config.local.js
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
