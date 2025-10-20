@@ -1,0 +1,111 @@
+name: Test and Validate
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        
+      - name: Check file structure
+        run: |
+          echo "📁 Checking file structure..."
+          ls -la
+          echo "Required files:"
+          [ -f "index.html" ] && echo "✅ index.html exists" || echo "❌ index.html missing"
+          [ -f "README.md" ] && echo "✅ README.md exists" || echo "❌ README.md missing"
+          [ -f "LICENSE" ] && echo "✅ LICENSE exists" || echo "❌ LICENSE missing"
+          [ -f "VERSION" ] && echo "✅ VERSION exists" || echo "❌ VERSION missing"
+          
+      - name: Validate version format
+        run: |
+          echo "🏷️ Validating version format..."
+          if [[ -f "VERSION" ]]; then
+            version=$(cat VERSION)
+            if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "✅ Version format valid: $version"
+            else
+              echo "❌ Invalid version format: $version (expected: X.Y.Z)"
+              exit 1
+            fi
+          else
+            echo "❌ VERSION file not found"
+            exit 1
+          fi
+          
+      - name: Check for critical issues
+        run: |
+          echo "🚨 Checking for critical issues..."
+          
+          # Check if HTML has required meta tags
+          if grep -q '<meta charset="UTF-8"' index.html; then
+            echo "✅ UTF-8 charset declared"
+          else
+            echo "❌ UTF-8 charset not declared"
+            exit 1
+          fi
+          
+          # Check if HTML has viewport meta tag
+          if grep -q 'viewport' index.html; then
+            echo "✅ Viewport meta tag found"
+          else
+            echo "❌ Viewport meta tag missing"
+            exit 1
+          fi
+          
+          # Check if JavaScript is properly closed
+          if grep -q '</script>' index.html; then
+            echo "✅ JavaScript tags properly closed"
+          else
+            echo "❌ JavaScript tags not properly closed"
+            exit 1
+          fi
+          
+          # Check if HTML has proper structure
+          if grep -q '<!DOCTYPE html>' index.html; then
+            echo "✅ DOCTYPE declared"
+          else
+            echo "❌ DOCTYPE missing"
+            exit 1
+          fi
+          
+          if grep -q '<html' index.html && grep -q '</html>' index.html; then
+            echo "✅ HTML tags properly closed"
+          else
+            echo "❌ HTML tags not properly closed"
+            exit 1
+          fi
+          
+      - name: Basic HTML validation
+        run: |
+          echo "🔍 Basic HTML validation..."
+          
+          # Check for common HTML issues
+          if grep -q '<script>' index.html && ! grep -q '</script>' index.html; then
+            echo "❌ Unclosed script tag found"
+            exit 1
+          fi
+          
+          if grep -q '<style>' index.html && ! grep -q '</style>' index.html; then
+            echo "❌ Unclosed style tag found"
+            exit 1
+          fi
+          
+          # Check for balanced tags (basic check)
+          open_divs=$(grep -o '<div' index.html | wc -l)
+          close_divs=$(grep -o '</div>' index.html | wc -l)
+          
+          if [ "$open_divs" -ne "$close_divs" ]; then
+            echo "⚠️ Warning: Div tags may not be balanced (open: $open_divs, close: $close_divs)"
+          else
+            echo "✅ Div tags are balanced"
+          fi
+          
+      - name: Test completed
+        run: |
+          echo "🎉 All tests completed successfully!"
+          echo "Mizu Notes is ready for deployment"
+          echo "Status check name: 'Test and Validate'"
