@@ -4,6 +4,7 @@ export class Editor {
         this.notesManager = notesManager;
         this.elements = {};
         this.autoSaveTimeout = null;
+        this.isEditing = false;
         
         this.initializeElements();
         this.setupEventListeners();
@@ -29,12 +30,21 @@ export class Editor {
         this.notesManager.subscribe('currentNoteChanged', (noteId) => {
             this.update();
         });
+
+        this.notesManager.subscribe('notesLoaded', () => {
+            // Asegurar que el editor se actualice después de cargar las notas
+            setTimeout(() => this.update(), 100);
+        });
     }
 
     handleNoteChange() {
         const currentNote = this.notesManager.getCurrentNote();
-        if (!currentNote) return;
+        if (!currentNote) {
+            console.warn('Editor: Intento de editar sin nota seleccionada');
+            return;
+        }
 
+        this.isEditing = true;
         const title = this.elements.noteTitle.value;
         const content = this.elements.noteContent.value;
         
@@ -50,11 +60,14 @@ export class Editor {
     scheduleAutoSave() {
         clearTimeout(this.autoSaveTimeout);
         this.autoSaveTimeout = setTimeout(async () => {
-            try {
-                await this.notesManager.save();
-                this.showAutoSaveIndicator();
-            } catch (error) {
-                console.error('Auto-save failed:', error);
+            if (this.isEditing) {
+                try {
+                    await this.notesManager.save();
+                    this.showAutoSaveIndicator();
+                    this.isEditing = false;
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                }
             }
         }, 1000);
     }
@@ -78,16 +91,26 @@ export class Editor {
         this.elements.noteTitle.disabled = true;
         this.elements.noteContent.disabled = true;
         this.updateStats();
+        
+        console.log('Editor: Mostrando estado vacío');
     }
 
     showNote(note) {
-        this.elements.noteTitle.value = note.title;
-        this.elements.noteContent.value = note.content;
+        // Solo actualizar si los valores son diferentes para evitar parpadeo
+        if (this.elements.noteTitle.value !== note.title) {
+            this.elements.noteTitle.value = note.title;
+        }
+        if (this.elements.noteContent.value !== note.content) {
+            this.elements.noteContent.value = note.content;
+        }
+        
         this.elements.noteTitle.placeholder = 'Título de la nota...';
         this.elements.noteContent.placeholder = 'Escribe tu nota aquí...';
         this.elements.noteTitle.disabled = false;
         this.elements.noteContent.disabled = false;
         this.updateStats();
+        
+        console.log(`Editor: Mostrando nota "${note.title}"`);
     }
 
     updateStats() {
@@ -110,14 +133,18 @@ export class Editor {
 
     focusTitle() {
         setTimeout(() => {
-            this.elements.noteTitle.focus();
-            this.elements.noteTitle.select();
+            if (this.elements.noteTitle && !this.elements.noteTitle.disabled) {
+                this.elements.noteTitle.focus();
+                this.elements.noteTitle.select();
+            }
         }, 100);
     }
 
     focusContent() {
         setTimeout(() => {
-            this.elements.noteContent.focus();
+            if (this.elements.noteContent && !this.elements.noteContent.disabled) {
+                this.elements.noteContent.focus();
+            }
         }, 100);
     }
 
@@ -125,5 +152,10 @@ export class Editor {
         this.elements.noteTitle.value = '';
         this.elements.noteContent.value = '';
         this.updateStats();
+    }
+
+    // Método para forzar actualización
+    refresh() {
+        this.update();
     }
 }

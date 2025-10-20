@@ -48,12 +48,22 @@ export class MizuNotesApp {
     }
 
     async initializeStorage() {
+        // Por defecto usar LocalStorage (como lo tenías)
         this.storage = new LocalStorage();
+        
+        // Para usar API storage cuando esté disponible
+        // this.storage = new ApiStorage('https://tu-api.com');
+        // await this.storage.initialize();
     }
 
     async initializeManagers() {
         this.notesManager = new NotesManager(this.storage);
         this.syncManager = new SyncManager(this.storage, this.notesManager);
+        
+        // Si estás usando ApiStorage, inicialízalo (como lo tenías)
+        if (this.storage.initialize) {
+            await this.storage.initialize();
+        }
     }
 
     async initializeUI() {
@@ -82,7 +92,6 @@ export class MizuNotesApp {
         }
     }
 
-    // ... resto de los métodos permanecen igual
     async loadInitialData() {
         await this.notesManager.initialize();
         this.syncManager.startSyncInterval();
@@ -110,8 +119,11 @@ export class MizuNotesApp {
             await this.notesManager.save();
             this.showMessage('Nota eliminada correctamente');
             
+            // SI NO QUEDAN NOTAS, CREAR UNA NUEVA AUTOMÁTICAMENTE
             if (this.notesManager.getNotes().length === 0) {
-                setTimeout(() => this.createNewNote(), 1000);
+                setTimeout(() => {
+                    this.createNewNote();
+                }, 1000);
             }
         }
     }

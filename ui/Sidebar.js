@@ -31,6 +31,7 @@ export class Sidebar {
         this.notesManager.subscribe('noteUpdated', () => this.update());
         this.notesManager.subscribe('noteDeleted', () => this.update());
         this.notesManager.subscribe('currentNoteChanged', () => this.update());
+        this.notesManager.subscribe('notesChanged', () => this.update());
     }
 
     update() {
@@ -91,6 +92,7 @@ export class Sidebar {
     }
 
     selectNote(noteId) {
+        console.log(`Sidebar: Seleccionando nota ${noteId}`);
         this.notesManager.setCurrentNote(noteId);
     }
 
