@@ -1,4 +1,4 @@
-// core/Note.js
+// .\src\shared\types\Note.js
 export class Note {
     constructor(id, title = '', content = '') {
         this.id = id;

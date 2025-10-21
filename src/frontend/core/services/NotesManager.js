@@ -1,4 +1,4 @@
-// core/NotesManager.js
+// src/frontend/core/services/NotesManager.js
 import { Note } from '../../../shared/types/Note.js';
 
 export class NotesManager {
@@ -7,6 +7,7 @@ export class NotesManager {
         this.notes = new Map();
         this.currentNoteId = null;
         this.listeners = new Map();
+        this.isInitialized = false;
     }
 
     subscribe(event, callback) {
@@ -26,42 +27,44 @@ export class NotesManager {
         try {
             const notes = await this.storage.getNotes();
             this.notes.clear();
-            notes.forEach(note => {
+            
+            // Asegurar que todas las notas son instancias de Note
+            notes.forEach(noteData => {
+                const note = noteData instanceof Note ? noteData : Note.fromJSON(noteData);
                 this.notes.set(note.id, note);
             });
 
-            // CAMBIO CLAVE: SI NO HAY NOTAS, CREAR UNA INMEDIATAMENTE
+            this.isInitialized = true;
+            this.emit('notesLoaded', Array.from(this.notes.values()));
+
+            // SI NO HAY NOTAS, CREAR UNA INMEDIATAMENTE
             if (this.notes.size === 0) {
                 await this.createFirstNote();
             } else {
                 // SI HAY NOTAS, SELECCIONAR LA ÚLTIMA EDITADA
-                const lastEdited = this.getLastEditedNoteId();
-                this.setCurrentNote(lastEdited);
+                const lastEditedId = this.getLastEditedNoteId();
+                this.setCurrentNote(lastEditedId);
             }
+            
         } catch (error) {
-            console.error('Error loading notes:', error);
+            console.error('Error initializing notes manager:', error);
             // EN CASO DE ERROR, CREAR NOTA POR DEFECTO
             await this.createFirstNote();
+            throw error;
         }
     }
 
-    // NUEVO MÉTODO: CREAR PRIMERA NOTA
     async createFirstNote() {
-        const noteId = this.generateId();
-        const note = new Note(noteId, 'Mi Primera Nota', '¡Bienvenido a Mizu Notes!\n\nComienza a escribir tus ideas aquí...');
-        this.notes.set(noteId, note);
-        this.currentNoteId = noteId;
+        const note = this.createNote('Mi Primera Nota', '¡Bienvenido a Mizu Notes!\n\nComienza a escribir tus ideas aquí...');
+        this.setCurrentNote(note.id);
         await this.save();
-        this.emit('noteCreated', note);
-        this.emit('notesChanged', Array.from(this.notes.values()));
-        this.emit('currentNoteChanged', noteId);
         return note;
     }
 
     createNote(title = 'Nueva Nota', content = '') {
-        const noteId = this.generateId();
-        const note = new Note(noteId, title, content);
-        this.notes.set(noteId, note);
+        const id = this.generateId();
+        const note = new Note(id, title, content);
+        this.notes.set(id, note);
         this.emit('noteCreated', note);
         this.emit('notesChanged', Array.from(this.notes.values()));
         return note;
@@ -77,17 +80,31 @@ export class NotesManager {
 
     setCurrentNote(id) {
         if (this.notes.has(id) || id === null) {
+            const previousNoteId = this.currentNoteId;
             this.currentNoteId = id;
-            this.emit('currentNoteChanged', id);
+            
+            // Solo emitir si realmente cambió la nota
+            if (previousNoteId !== id) {
+                this.emit('currentNoteChanged', id);
+            }
+            return true;
         }
+        return false;
     }
 
     updateNote(id, title, content) {
         const note = this.notes.get(id);
         if (note) {
+            const previousTitle = note.title;
+            const previousContent = note.content;
+            
             note.update(title, content);
-            this.emit('noteUpdated', note);
-            this.emit('notesChanged', Array.from(this.notes.values()));
+            
+            // Solo emitir si realmente hubo cambios
+            if (previousTitle !== title || previousContent !== content) {
+                this.emit('noteUpdated', note);
+                this.emit('notesChanged', Array.from(this.notes.values()));
+            }
             return note;
         }
         return null;
@@ -101,14 +118,7 @@ export class NotesManager {
             this.emit('notesChanged', Array.from(this.notes.values()));
             
             if (this.currentNoteId === id) {
-                const remainingNotes = Array.from(this.notes.values());
-                if (remainingNotes.length > 0) {
-                    const lastEdited = remainingNotes.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-                    this.setCurrentNote(lastEdited.id);
-                } else {
-                    this.currentNoteId = null;
-                    this.emit('currentNoteChanged', null);
-                }
+                this.setCurrentNote(this.getLastEditedNoteId());
             }
             return true;
         }
@@ -138,8 +148,8 @@ export class NotesManager {
 
     getStats() {
         const totalNotes = this.notes.size;
-        const totalChars = Array.from(this.notes.values())
-            .reduce((sum, note) => sum + note.content.length, 0);
+        const totalChars = this.getNotes()
+            .reduce((sum, note) => sum + note.getCharacterCount(), 0);
         
         return { totalNotes, totalChars };
     }
@@ -149,9 +159,13 @@ export class NotesManager {
     }
 
     async save() {
-        const notesData = Array.from(this.notes.values());
-        await this.storage.saveNotes(this.notes);
-        this.emit('notesSaved');
+        try {
+            await this.storage.saveNotes(this.notes);
+            this.emit('notesSaved');
+        } catch (error) {
+            console.error('Error saving notes:', error);
+            throw error;
+        }
     }
 
     async exportNotes() {
@@ -162,11 +176,16 @@ export class NotesManager {
         const importedNotes = await this.storage.importNotes(data);
         importedNotes.forEach(noteData => {
             const note = Note.fromJSON(noteData);
-            note.id = this.generateId();
+            note.id = this.generateId(); // Nuevo ID para evitar conflictos
             this.notes.set(note.id, note);
         });
         this.emit('notesImported', importedNotes);
         this.emit('notesChanged', Array.from(this.notes.values()));
         return importedNotes;
+    }
+
+    // Método para verificar si está inicializado
+    isReady() {
+        return this.isInitialized && this.notes.size > 0 && this.currentNoteId !== null;
     }
 }
