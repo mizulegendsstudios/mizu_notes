@@ -1,11 +1,11 @@
 // app.js
-import { LocalStorage } from './storage/LocalStorage.js';
-import { ApiStorage } from './storage/ApiStorage.js';
-import { NotesManager } from './core/NotesManager.js';
-import { SyncManager } from './core/SyncManager.js';
-import { StyleEngine } from './core/StyleEngine.js';
-import { Editor } from './ui/Editor.js';
-import { Sidebar } from './ui/Sidebar.js';
+import { LocalStorage } from './core/storage/LocalStorage.js';
+import { ApiStorage } from './core/storage/ApiStorage.js';
+import { NotesManager } from './core/services/NotesManager.js';
+import { SyncManager } from './core/services/SyncManager.js';
+import { StyleEngine } from './core/styles/StyleEngine.js';
+import { Editor } from './features/notes/Editor.js';
+import { Sidebar } from './features/notes/Sidebar.js';
 
 export class MizuNotesApp {
     constructor() {

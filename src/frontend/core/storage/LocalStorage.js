@@ -1,5 +1,5 @@
 // storage/LocalStorage.js
-import { Note } from '../core/Note.js';
+import { Note } from '../../../shared/types/Note.js';
 
 export class LocalStorage {
     constructor() {

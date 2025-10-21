@@ -1,4 +1,4 @@
-import { Note } from '../core/Note.js';
+import { Note } from '../../../shared/types/Note.js';
 
 export class ApiStorage {
     constructor(baseURL = 'http://localhost:3000/api') {
