@@ -1,5 +1,5 @@
 // core/NotesManager.js
-import { Note } from './Note.js';
+import { Note } from '../../../shared/types/Note.js';
 
 export class NotesManager {
     constructor(storage) {
