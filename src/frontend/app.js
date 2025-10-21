@@ -1,4 +1,4 @@
-// app.js
+// src/frontend/app.js
 import { LocalStorage } from './core/storage/LocalStorage.js';
 import { ApiStorage } from './core/storage/ApiStorage.js';
 import { NotesManager } from './core/services/NotesManager.js';
@@ -42,28 +42,21 @@ export class MizuNotesApp {
         this.styleEngine = new StyleEngine();
         this.styleEngine.initialize();
         
-        // Aplicar tema por defecto o guardado
-        const savedTheme = localStorage.getItem('mizuNotes-theme') || 'default';
-        this.styleEngine.applyTheme(savedTheme);
+        // CORREGIDO: Solo aplicar tema si existe
+        const savedTheme = localStorage.getItem('mizuNotes-theme');
+        if (savedTheme && this.styleEngine.getRegisteredThemes().includes(savedTheme)) {
+            this.styleEngine.applyTheme(savedTheme);
+        }
+        // Si no hay tema guardado, usar el que viene por defecto del StyleEngine
     }
 
     async initializeStorage() {
-        // Por defecto usar LocalStorage (como lo tenías)
         this.storage = new LocalStorage();
-        
-        // Para usar API storage cuando esté disponible
-        // this.storage = new ApiStorage('https://tu-api.com');
-        // await this.storage.initialize();
     }
 
     async initializeManagers() {
         this.notesManager = new NotesManager(this.storage);
         this.syncManager = new SyncManager(this.storage, this.notesManager);
-        
-        // Si estás usando ApiStorage, inicialízalo (como lo tenías)
-        if (this.storage.initialize) {
-            await this.storage.initialize();
-        }
     }
 
     async initializeUI() {
@@ -93,8 +86,34 @@ export class MizuNotesApp {
     }
 
     async loadInitialData() {
-        await this.notesManager.initialize();
-        this.syncManager.startSyncInterval();
+        try {
+            await this.notesManager.initialize();
+            
+            // VERIFICAR QUE TODO ESTÉ LISTO
+            if (this.notesManager.isReady()) {
+                console.log('App: Notas cargadas y lista para usar');
+            } else {
+                console.warn('App: El administrador de notas no está listo');
+                // FORZAR CREACIÓN DE NOTA SI ES NECESARIO
+                if (this.notesManager.getNotes().length === 0) {
+                    await this.notesManager.createFirstNote();
+                }
+            }
+            
+            this.syncManager.startSyncInterval();
+            
+        } catch (error) {
+            console.error('Error cargando datos iniciales:', error);
+            // CREAR NOTA DE EMERGENCIA SI TODO FALLA
+            await this.createEmergencyNote();
+        }
+    }
+
+    async createEmergencyNote() {
+        console.log('App: Creando nota de emergencia');
+        const note = this.notesManager.createNote('Nota de Emergencia', 'Se produjo un error al cargar las notas. Esta es una nota nueva.');
+        this.notesManager.setCurrentNote(note.id);
+        await this.notesManager.save();
     }
 
     async createNewNote() {
@@ -203,7 +222,25 @@ export class MizuNotesApp {
     }
 
     showNotification(message, type = 'success') {
-        // Implementación de notificaciones...
+        // Implementación simple de notificación
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            background-color: ${type === 'success' ? '#4bb543' : '#e63946'};
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 3000);
     }
 
     setupUIEventListeners() {
@@ -217,8 +254,32 @@ export class MizuNotesApp {
         window.addEventListener('beforeunload', () => this.forceSave());
         window.addEventListener('error', (event) => {
             console.error('Error no capturado:', event.error);
-            this.showError('Ha ocurrido un error inesperado');
         });
+    }
+
+    // Método para cambiar entre almacenamiento local y API
+    async switchToApiStorage(baseURL) {
+        try {
+            this.storage = new ApiStorage(baseURL);
+            await this.storage.initialize();
+            await this.reinitializeApp();
+            this.showMessage('Cambiado a modo API');
+        } catch (error) {
+            console.error('Error cambiando a API storage:', error);
+            this.showError('Error al conectar con la API');
+        }
+    }
+
+    async switchToLocalStorage() {
+        this.storage = new LocalStorage();
+        await this.reinitializeApp();
+        this.showMessage('Cambiado a modo local');
+    }
+
+    async reinitializeApp() {
+        this.syncManager.stopSyncInterval();
+        await this.initializeManagers();
+        await this.loadInitialData();
     }
 }
 

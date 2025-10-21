@@ -1,4 +1,4 @@
-// storage/LocalStorage.js
+﻿// src/frontend/core/storage/LocalStorage.js
 import { Note } from '../../../shared/types/Note.js';
 
 export class LocalStorage {
@@ -14,12 +14,12 @@ export class LocalStorage {
                 if (saved) {
                     const data = JSON.parse(saved);
                     
-                    // Validar que sea un array
                     if (!Array.isArray(data.notes)) {
                         throw new Error('Formato de datos inválido');
                     }
                     
-                    resolve(data.notes);
+                    const notes = data.notes.map(noteData => Note.fromJSON(noteData));
+                    resolve(notes);
                 } else {
                     resolve([]);
                 }
@@ -33,11 +33,17 @@ export class LocalStorage {
     async saveNotes(notesMap) {
         return new Promise((resolve, reject) => {
             try {
-                const notes = Array.from(notesMap.values()).map(note => note.toJSON());
+                const notes = Array.from(notesMap.values()).map(note => {
+                    if (!(note instanceof Note)) {
+                        return Note.fromJSON(note);
+                    }
+                    return note;
+                });
+                
                 const data = {
                     version: this.version,
                     lastSaved: Date.now(),
-                    notes: notes
+                    notes: notes.map(note => note.toJSON())
                 };
                 
                 localStorage.setItem(this.storageKey, JSON.stringify(data));
@@ -55,7 +61,7 @@ export class LocalStorage {
             return JSON.stringify({
                 version: this.version,
                 exportedAt: Date.now(),
-                notes: notes
+                notes: notes.map(note => note.toJSON())
             }, null, 2);
         } catch (error) {
             console.error('Error exporting notes:', error);
@@ -68,20 +74,11 @@ export class LocalStorage {
             try {
                 const importedData = JSON.parse(data);
                 
-                // Validar estructura del archivo importado
                 if (!importedData.notes || !Array.isArray(importedData.notes)) {
                     throw new Error('Formato de archivo inválido');
                 }
                 
-                const importedNotes = importedData.notes.map(noteData => {
-                    // Validar estructura básica de cada nota
-                    if (typeof noteData.title !== 'string' || typeof noteData.content !== 'string') {
-                        throw new Error('Nota con formato inválido');
-                    }
-                    
-                    return Note.fromJSON(noteData);
-                });
-                
+                const importedNotes = importedData.notes.map(noteData => Note.fromJSON(noteData));
                 resolve(importedNotes);
             } catch (error) {
                 console.error('Error importing notes:', error);
