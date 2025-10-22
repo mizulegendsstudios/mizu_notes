@@ -53,7 +53,7 @@ export async function authMiddleware(req, res, next) {
                 user.email,
                 user.user_metadata?.username || user.email.split('@')[0]
             );
-            console.log(\✅ Nuevo usuario creado: \\);
+            console.log(`✅ Nuevo usuario creado: ${dbUser.email}`);
         }
 
         // Agregar usuario al request
@@ -108,3 +108,6 @@ export async function optionalAuthMiddleware(req, res, next) {
         next();
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-﻿// src/frontend/core/storage/ApiStorage.js
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN FINAL CORREGIDA
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
@@ -14,18 +14,24 @@ export class ApiStorage {
     setAuthToken(token) {
         this.token = token;
         console.log('ApiStorage: Token de autenticación configurado');
+        // Guardar token en localStorage para persistencia
+        if (token) {
+            localStorage.setItem('mizu_auth_token', token);
+        } else {
+            localStorage.removeItem('mizu_auth_token');
+        }
     }
 
     async makeRequest(endpoint, options = {}) {
-        const operation = \pi_\\;
+        const operation = `api_${endpoint.replace(/\//g, '_')}`;
         
         try {
-            loadingService.startGlobalLoading(operation);
+            loadingService.startLoading(operation);
             
-            const response = await fetch(\\\\, {
+            const response = await fetch(`${this.baseURL}${endpoint}`, {
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.token && { 'Authorization': \Bearer \\ }),
+                    ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
                     ...options.headers
                 },
                 ...options
@@ -40,7 +46,7 @@ export class ApiStorage {
                     errorData = { error: errorText || 'Error desconocido' };
                 }
                 
-                throw new Error(errorData.error || \HTTP \: \\);
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
@@ -52,7 +58,7 @@ export class ApiStorage {
             
             // Mostrar notificación solo para errores que no sean de autenticación
             if (!error.message.includes('Token') && !error.message.includes('401')) {
-                notificationService.operationError('API Request', error);
+                notificationService.error(`Error en API: ${error.message}`);
             }
             
             throw error;
@@ -62,7 +68,24 @@ export class ApiStorage {
     async getNotes() {
         try {
             const result = await this.makeRequest('/notes');
-            return result.data || [];
+            
+            // Convertir array de objetos a Map de instancias Note
+            const notesMap = new Map();
+            if (result.data && Array.isArray(result.data)) {
+                result.data.forEach(noteData => {
+                    const note = new Note(
+                        noteData.id,
+                        noteData.title,
+                        noteData.content,
+                        noteData.createdAt,
+                        noteData.updatedAt,
+                        noteData.version
+                    );
+                    notesMap.set(note.id, note);
+                });
+            }
+            
+            return notesMap;
         } catch (error) {
             console.error('Error obteniendo notas:', error);
             throw error;
@@ -71,7 +94,14 @@ export class ApiStorage {
 
     async saveNotes(notesMap) {
         try {
-            const notes = Array.from(notesMap.values()).map(note => note.toJSON());
+            const notes = Array.from(notesMap.values()).map(note => ({
+                id: note.id,
+                title: note.title,
+                content: note.content,
+                version: note.version,
+                lastSynced: note.lastSynced
+            }));
+            
             const result = await this.makeRequest('/notes/sync', {
                 method: 'POST',
                 body: JSON.stringify({ 
@@ -80,7 +110,7 @@ export class ApiStorage {
                 })
             });
             
-            notificationService.operationSuccess('Sincronización');
+            notificationService.success('Notas sincronizadas correctamente');
             return result;
         } catch (error) {
             console.error('Error guardando notas:', error);
@@ -105,7 +135,7 @@ export class ApiStorage {
 
     async updateNote(noteId, updates) {
         try {
-            const result = await this.makeRequest(\/notes/\\, {
+            const result = await this.makeRequest(`/notes/${noteId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updates)
             });
@@ -120,7 +150,7 @@ export class ApiStorage {
 
     async deleteNote(noteId) {
         try {
-            const result = await this.makeRequest(\/notes/\\, {
+            const result = await this.makeRequest(`/notes/${noteId}`, {
                 method: 'DELETE'
             });
             
@@ -148,6 +178,7 @@ export class ApiStorage {
             return result;
         } catch (error) {
             console.error('Error en login:', error);
+            notificationService.error('Error en inicio de sesión');
             throw error;
         }
     }
@@ -163,6 +194,7 @@ export class ApiStorage {
             return result;
         } catch (error) {
             console.error('Error en registro:', error);
+            notificationService.error('Error en registro');
             throw error;
         }
     }
@@ -174,9 +206,13 @@ export class ApiStorage {
             });
             
             this.token = null;
-            notificationService.info('Sesión cerrada');
+            localStorage.removeItem('mizu_auth_token');
+            notificationService.info('Sesión cerrada correctamente');
         } catch (error) {
             console.error('Error en logout:', error);
+            // Limpiar token incluso si hay error
+            this.token = null;
+            localStorage.removeItem('mizu_auth_token');
             throw error;
         }
     }
@@ -192,7 +228,26 @@ export class ApiStorage {
     }
 
     async initialize() {
+        // Recuperar token de localStorage si existe
+        const savedToken = localStorage.getItem('mizu_auth_token');
+        if (savedToken) {
+            this.token = savedToken;
+            console.log('ApiStorage: Token recuperado de localStorage');
+        }
+        
         console.log('ApiStorage: Inicialización completada');
         return true;
+    }
+
+    // Método para verificar conexión
+    async checkConnection() {
+        try {
+            await this.makeRequest('/health');
+            this.isOnline = true;
+            return true;
+        } catch (error) {
+            this.isOnline = false;
+            return false;
+        }
     }
 }

@@ -1,4 +1,4 @@
-// core/SyncManager.js
+﻿// src/frontend/core/services/SyncManager.js - VERSIÓN REAL
 export class SyncManager {
     constructor(storage, notesManager) {
         this.storage = storage;
@@ -56,15 +56,14 @@ export class SyncManager {
     }
 
     async performSync() {
-        // Simular sincronización con servidor
-        // En una implementación real, aquí se conectaría con la API
-        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+        // SINCRONIZACIÓN REAL - Guardar todas las notas en el backend
+        const notesMap = this.notesManager.getNotes();
         
-        // Simular fallo aleatorio (10% de probabilidad)
-        if (Math.random() < 0.1) {
-            throw new Error('Error de servidor simulado');
+        if (notesMap.size > 0) {
+            await this.storage.saveNotes(notesMap);
+            console.log('✅ Notas sincronizadas con el backend');
         }
-
+        
         // Marcar notas como sincronizadas
         this.syncQueue.forEach(noteId => {
             const note = this.notesManager.getNote(noteId);

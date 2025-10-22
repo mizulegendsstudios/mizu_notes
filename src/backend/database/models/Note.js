@@ -1,4 +1,4 @@
-﻿// src/backend/database/models/Note.js
+﻿// src/backend/database/models/Note.js - VERSIÓN CORREGIDA
 import { db } from '../connection.js';
 
 export class NoteModel {
@@ -6,16 +6,16 @@ export class NoteModel {
         const { title = '', content = '', version = 1 } = noteData;
         
         const result = await db.query(
-            \INSERT INTO notes (user_id, title, content, version) 
-             VALUES (\, \, \, \) 
-             RETURNING *\,
+            `INSERT INTO notes (user_id, title, content, version) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING *`,
             [userId, title, content, version]
         );
         return result.rows[0];
     }
 
     static async findByUser(userId, includeDeleted = false) {
-        let query = 'SELECT * FROM notes WHERE user_id = \';
+        let query = 'SELECT * FROM notes WHERE user_id = $1';
         const params = [userId];
         
         if (!includeDeleted) {
@@ -30,7 +30,7 @@ export class NoteModel {
 
     static async findById(id, userId) {
         const result = await db.query(
-            'SELECT * FROM notes WHERE id = \ AND user_id = \ AND is_deleted = false',
+            'SELECT * FROM notes WHERE id = $1 AND user_id = $2 AND is_deleted = false',
             [id, userId]
         );
         return result.rows[0];
@@ -40,10 +40,10 @@ export class NoteModel {
         const { title, content, version } = updates;
         
         const result = await db.query(
-            \UPDATE notes 
-             SET title = \, content = \, version = \, updated_at = NOW()
-             WHERE id = \ AND user_id = \ AND is_deleted = false
-             RETURNING *\,
+            `UPDATE notes 
+             SET title = $1, content = $2, version = $3, updated_at = NOW()
+             WHERE id = $4 AND user_id = $5 AND is_deleted = false
+             RETURNING *`,
             [title, content, version, id, userId]
         );
         return result.rows[0];
@@ -51,10 +51,10 @@ export class NoteModel {
 
     static async softDelete(id, userId) {
         const result = await db.query(
-            \UPDATE notes 
+            `UPDATE notes 
              SET is_deleted = true, updated_at = NOW()
-             WHERE id = \ AND user_id = \
-             RETURNING *\,
+             WHERE id = $1 AND user_id = $2
+             RETURNING *`,
             [id, userId]
         );
         return result.rows[0];
@@ -73,12 +73,12 @@ export class NoteModel {
 
     static async getStats(userId) {
         const result = await db.query(
-            \SELECT 
+            `SELECT 
                 COUNT(*) as total_notes,
                 COUNT(*) FILTER (WHERE is_deleted = true) as deleted_notes,
                 SUM(LENGTH(content)) as total_chars
              FROM notes 
-             WHERE user_id = \\,
+             WHERE user_id = $1`,
             [userId]
         );
         return result.rows[0];

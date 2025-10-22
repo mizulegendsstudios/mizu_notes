@@ -1,35 +1,35 @@
-﻿{
-  \"name\": \"mizu-notes\",
-  \"type\": \"module\",
-  \"version\": \"1.0.0\",
-  \"description\": \"Mizu Notes - Bloc de notas offline-first con Katana Framework\",
-  \"scripts\": {
-    \"dev:frontend\": \"echo 'Abrir index.html en servidor local'\",
-    \"dev:backend\": \"node src/backend/server.js\",
-    \"dev:backend:watch\": \"nodemon src/backend/server.js\",
-    \"migrate\": \"node scripts/db/migrate.js\",
-    \"deploy:backend\": \"vercel --prod\",
-    \"test:db\": \"node scripts/db/test-connection.js\"
+{
+  "name": "mizu-notes",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Mizu Notes - Bloc de notas offline-first con Katana Framework",
+  "scripts": {
+    "dev:frontend": "echo 'Abrir index.html en servidor local'",
+    "dev:backend": "node src/backend/server.js",
+    "dev:backend:watch": "nodemon src/backend/server.js",
+    "migrate": "node scripts/db/migrate.js",
+    "deploy:backend": "vercel --prod",
+    "test:db": "node scripts/db/test-connection.js"
   },
-  \"dependencies\": {
-    \"express\": \"^4.18.0\",
-    \"cors\": \"^2.8.5\",
-    \"pg\": \"^8.11.0\",
-    \"dotenv\": \"^16.3.0\",
-    \"helmet\": \"^7.0.0\",
-    \"express-rate-limit\": \"^6.8.1\",
-    \"@supabase/supabase-js\": \"^2.38.0\"
+  "dependencies": {
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "pg": "^8.11.0",
+    "dotenv": "^16.3.0",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.8.1",
+    "@supabase/supabase-js": "^2.38.0"
   },
-  \"devDependencies\": {
-    \"nodemon\": \"^3.0.0\"
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   },
-  \"keywords\": [
-    \"notes\",
-    \"offline-first\",
-    \"postgresql\",
-    \"supabase\",
-    \"katana-framework\"
+  "keywords": [
+    "notes",
+    "offline-first",
+    "postgresql",
+    "supabase",
+    "katana-framework"
   ],
-  \"author\": \"Mizu Legends Studios\",
-  \"license\": \"AGPL-3.0\"
+  "author": "Mizu Legends Studios",
+  "license": "AGPL-3.0"
 }

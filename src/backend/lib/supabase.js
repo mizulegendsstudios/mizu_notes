@@ -1,9 +1,9 @@
 ﻿// src/backend/lib/supabase.js
 import { createClient } from '@supabase/supabase-js';
-import config from '../config/environment.js';
+import { config } from '../config/environment.js'; // ← Cambiar a named import
 
 export const supabase = createClient(
-    config.supabaseUrl,
+    config.supabaseUrl, // ← Ahora debería funcionar
     config.supabaseKey,
     {
         auth: {
@@ -57,3 +57,4 @@ export async function createUser(email, password) {
         throw error;
     }
 }
+
