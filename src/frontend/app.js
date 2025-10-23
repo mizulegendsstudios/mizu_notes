@@ -1,8 +1,9 @@
-// src/frontend/app.js - VERSIÓN MEJORADA
+// src/frontend/app.js - VERSIÓN CORREGIDA
 import { LocalStorage } from './core/storage/LocalStorage.js';
 import { ApiStorage } from './core/storage/ApiStorage.js';
 import { NotesManager } from './core/services/NotesManager.js';
 import { SyncManager } from './core/services/SyncManager.js';
+import { AuthManager } from './core/services/AuthManager.js'; // NUEVO
 import { StyleEngine } from './core/styles/StyleEngine.js';
 import { Editor } from './features/notes/Editor.js';
 import { Sidebar } from './features/notes/Sidebar.js';
@@ -12,6 +13,7 @@ export class MizuNotesApp {
         this.storage = null;
         this.notesManager = null;
         this.syncManager = null;
+        this.authManager = null; // NUEVO
         this.styleEngine = null;
         this.editor = null;
         this.sidebar = null;
@@ -21,61 +23,35 @@ export class MizuNotesApp {
 
     async initializeApp() {
         try {
-            // PRIMERO: Inicializar sesión si existe
-            await this.initializeSession();
-            
-            // LUEGO: Inicializar el resto
-            await this.initializeStyleEngine();
+            // 1. Inicializar storage (decidir entre local y API)
             await this.initializeStorage();
+            
+            // 2. Inicializar managers
             await this.initializeManagers();
+            
+            // 3. Inicializar AuthManager (¡IMPORTANTE!)
+            await this.initializeAuthManager();
+            
+            // 4. Inicializar UI y estilos
+            await this.initializeStyleEngine();
             await this.initializeUI();
             await this.loadInitialData();
+            
+            // 5. Configurar event listeners
             this.setupGlobalEventListeners();
             
-            console.log('Mizu Notes inicializado correctamente');
+            console.log('🎉 Mizu Notes inicializado correctamente');
+            
         } catch (error) {
             console.error('Error inicializando la aplicación:', error);
             this.showError('Error al inicializar la aplicación');
         }
     }
 
-    // NUEVO: Inicializar gestión de sesiones
-    async initializeSession() {
-        // Si estás usando Supabase Auth
-        if (window.supabaseAuth) {
-            const sessionResult = await window.supabaseAuth.initializeSession();
-            if (sessionResult.success && sessionResult.user) {
-                console.log('✅ Sesión de usuario restaurada:', sessionResult.user.email);
-                
-                // Configurar ApiStorage con el usuario autenticado
-                if (this.storage && this.storage.setAuthToken) {
-                    this.storage.setAuthToken(sessionResult.session.access_token);
-                }
-            }
-        }
-    }
-
-    async initializeStyleEngine() {
-        this.styleEngine = new StyleEngine();
-        this.styleEngine.initialize();
-        
-        // CORREGIDO: Solo aplicar tema si existe
-        const savedTheme = localStorage.getItem('mizuNotes-theme');
-        if (savedTheme && this.styleEngine.getRegisteredThemes().includes(savedTheme)) {
-            this.styleEngine.applyTheme(savedTheme);
-        }
-        // Si no hay tema guardado, usar el que viene por defecto del StyleEngine
-    }
-
     async initializeStorage() {
-        // Verificar si hay usuario autenticado para decidir qué storage usar
-        const hasAuth = localStorage.getItem('mizu_auth_token');
-        if (hasAuth) {
-            this.storage = new ApiStorage();
-            await this.storage.initialize();
-        } else {
-            this.storage = new LocalStorage();
-        }
+        // Siempre empezar con LocalStorage por defecto
+        this.storage = new LocalStorage();
+        console.log('💾 Storage inicializado: LocalStorage');
     }
 
     async initializeManagers() {
@@ -83,29 +59,116 @@ export class MizuNotesApp {
         this.syncManager = new SyncManager(this.storage, this.notesManager);
     }
 
+    async initializeAuthManager() {
+        // NUEVO: AuthManager conecta Supabase con el storage y notes
+        this.authManager = new AuthManager(this.storage, this.notesManager);
+        
+        // Hacer disponible globalmente
+        window.authManager = this.authManager;
+        
+        console.log('🔐 AuthManager inicializado');
+    }
+
+    async initializeStyleEngine() {
+        this.styleEngine = new StyleEngine();
+        this.styleEngine.initialize();
+        
+        const savedTheme = localStorage.getItem('mizuNotes-theme');
+        if (savedTheme && this.styleEngine.getRegisteredThemes().includes(savedTheme)) {
+            this.styleEngine.applyTheme(savedTheme);
+        }
+    }
+
     async initializeUI() {
         this.editor = new Editor(this.notesManager);
         this.sidebar = new Sidebar(this.notesManager);
         
-        // Hacer disponibles globalmente para los event listeners del HTML
+        // Hacer disponibles globalmente
         window.app = this;
         
         this.setupUIEventListeners();
-        this.setupThemeControls();
+        this.setupAuthUI(); // NUEVO
     }
 
-    setupThemeControls() {
-        // Puedes agregar controles para cambiar temas dinámicamente
-        // Por ejemplo, un selector de temas en la interfaz
+    // NUEVO: Configurar UI de autenticación
+    setupAuthUI() {
+        // Aquí puedes agregar botones de login/logout en tu HTML
+        // Por ejemplo:
+        this.createAuthButtons();
     }
 
-    // Método para cambiar tema
-    changeTheme(themeName) {
-        if (this.styleEngine.applyTheme(themeName)) {
-            localStorage.setItem('mizuNotes-theme', themeName);
-            this.showMessage(`Tema cambiado a: ${themeName}`);
+    createAuthButtons() {
+        // Buscar contenedor de auth o crear uno
+        let authContainer = document.getElementById('auth-container');
+        if (!authContainer) {
+            authContainer = document.createElement('div');
+            authContainer.id = 'auth-container';
+            authContainer.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                display: flex;
+                gap: 10px;
+            `;
+            document.querySelector('.toolbar').appendChild(authContainer);
+        }
+
+        // Crear botones de auth
+        const loginBtn = document.createElement('button');
+        loginBtn.textContent = '🔐 Login';
+        loginBtn.className = 'toolbar-btn';
+        loginBtn.onclick = () => this.showLoginModal();
+
+        const logoutBtn = document.createElement('button');
+        logoutBtn.textContent = '🚪 Logout';
+        logoutBtn.className = 'toolbar-btn danger';
+        logoutBtn.onclick = () => this.authManager.logout();
+
+        authContainer.innerHTML = '';
+        authContainer.appendChild(loginBtn);
+        authContainer.appendChild(logoutBtn);
+
+        // Actualizar visibilidad según estado de auth
+        this.updateAuthUI();
+    }
+
+    updateAuthUI() {
+        const authContainer = document.getElementById('auth-container');
+        if (!authContainer) return;
+
+        const isAuthenticated = this.authManager.isUserAuthenticated();
+        const user = this.authManager.getCurrentUser();
+        
+        if (isAuthenticated && user) {
+            authContainer.innerHTML = `
+                <span style="color: var(--text-light); margin-right: 10px;">
+                    👤 ${user.email}
+                </span>
+                <button class="toolbar-btn danger" onclick="app.authManager.logout()">
+                    🚪 Logout
+                </button>
+            `;
         } else {
-            this.showError(`Tema '${themeName}' no encontrado`);
+            authContainer.innerHTML = `
+                <button class="toolbar-btn" onclick="app.showLoginModal()">
+                    🔐 Login
+                </button>
+            `;
+        }
+    }
+
+    showLoginModal() {
+        // Implementar un modal de login simple
+        const email = prompt('Email:');
+        const password = prompt('Password:');
+        
+        if (email && password) {
+            this.authManager.login(email, password)
+                .then(result => {
+                    if (!result.success) {
+                        this.showError(result.error);
+                    }
+                });
         }
     }
 
@@ -113,22 +176,14 @@ export class MizuNotesApp {
         try {
             await this.notesManager.initialize();
             
-            // VERIFICAR QUE TODO ESTÉ LISTO
-            if (this.notesManager.isReady()) {
-                console.log('App: Notas cargadas y lista para usar');
-            } else {
-                console.warn('App: El administrador de notas no está listo');
-                // FORZAR CREACIÓN DE NOTA SI ES NECESARIO
-                if (this.notesManager.getNotes().length === 0) {
-                    await this.notesManager.createFirstNote();
-                }
+            if (this.notesManager.getNotes().size === 0) {
+                await this.notesManager.createFirstNote();
             }
             
             this.syncManager.startSyncInterval();
             
         } catch (error) {
             console.error('Error cargando datos iniciales:', error);
-            // CREAR NOTA DE EMERGENCIA SI TODO FALLA
             await this.createEmergencyNote();
         }
     }
@@ -140,6 +195,7 @@ export class MizuNotesApp {
         await this.notesManager.save();
     }
 
+    // ... (el resto de los métodos permanecen igual)
     async createNewNote() {
         const note = this.notesManager.createNote();
         this.notesManager.setCurrentNote(note.id);
@@ -162,8 +218,7 @@ export class MizuNotesApp {
             await this.notesManager.save();
             this.showMessage('Nota eliminada correctamente');
             
-            // SI NO QUEDAN NOTAS, CREAR UNA NUEVA AUTOMÁTICAMENTE
-            if (this.notesManager.getNotes().length === 0) {
+            if (this.notesManager.getNotes().size === 0) {
                 setTimeout(() => {
                     this.createNewNote();
                 }, 1000);
@@ -172,7 +227,7 @@ export class MizuNotesApp {
     }
 
     async exportNotes() {
-        if (this.notesManager.getNotes().length === 0) {
+        if (this.notesManager.getNotes().size === 0) {
             this.showError('No hay notas para exportar');
             return;
         }
@@ -246,7 +301,6 @@ export class MizuNotesApp {
     }
 
     showNotification(message, type = 'success') {
-        // Implementación simple de notificación
         const notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;
@@ -274,97 +328,34 @@ export class MizuNotesApp {
         document.getElementById('importBtn').addEventListener('click', () => this.importNotes());
     }
 
-    // MEJORADO: Setup de event listeners globales
     setupGlobalEventListeners() {
         window.addEventListener('beforeunload', () => this.forceSave());
         window.addEventListener('error', (event) => {
             console.error('Error no capturado:', event.error);
         });
         
-        // NUEVO: Eventos de autenticación
-        window.addEventListener('mizu:userLoggedIn', (event) => {
-            this.handleUserLogin(event.detail.user);
+        // NUEVO: Escuchar eventos de auth para actualizar UI
+        window.addEventListener('mizu:userLoggedIn', () => {
+            this.updateAuthUI();
+            this.switchToApiStorage();
         });
         
-        window.addEventListener('mizu:userLoggingOut', () => {
-            this.handleUserLogout();
-        });
-        
-        window.addEventListener('mizu:sessionRestored', (event) => {
-            this.handleSessionRestored(event.detail.user);
-        });
-
-        window.addEventListener('mizu:authError', () => {
-            this.handleAuthError();
+        window.addEventListener('mizu:userLoggedOut', () => {
+            this.updateAuthUI();
+            this.switchToLocalStorage();
         });
     }
 
-    // NUEVO: Manejar login de usuario
-    async handleUserLogin(user) {
+    async switchToApiStorage() {
         try {
-            this.showMessage(`¡Bienvenido ${user.email}!`);
-            
-            // Cambiar a ApiStorage si no está configurado
-            if (!(this.storage instanceof ApiStorage)) {
-                await this.switchToApiStorage();
-            }
-            
-            // Sincronizar datos
-            await this.syncManager.trySync();
-            
-        } catch (error) {
-            console.error('Error en post-login:', error);
-        }
-    }
-
-    // NUEVO: Manejar logout de usuario
-    async handleUserLogout() {
-        try {
-            // Cambiar a LocalStorage
-            await this.switchToLocalStorage();
-            
-            // Limpiar UI
-            this.notesManager.clearNotes();
-            this.notesManager.setCurrentNote(null);
-            
-            this.showMessage('Sesión cerrada correctamente');
-            
-        } catch (error) {
-            console.error('Error en post-logout:', error);
-        }
-    }
-
-    // NUEVO: Manejar sesión restaurada
-    async handleSessionRestored(user) {
-        console.log('Sesión restaurada para:', user.email);
-        
-        if (this.storage && this.storage.setAuthToken) {
-            // Obtener el token de Supabase
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                this.storage.setAuthToken(session.access_token);
-                
-                // Sincronizar en segundo plano
-                setTimeout(() => {
-                    this.syncManager.trySync();
-                }, 2000);
-            }
-        }
-    }
-
-    // NUEVO: Manejar error de autenticación
-    async handleAuthError() {
-        this.showError('Error de autenticación - Cambiando a modo local');
-        await this.switchToLocalStorage();
-    }
-
-    // Método para cambiar entre almacenamiento local y API
-    async switchToApiStorage(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
-        try {
-            this.storage = new ApiStorage(baseURL);
+            this.storage = new ApiStorage();
             await this.storage.initialize();
-            await this.reinitializeApp();
-            this.showMessage('Cambiado a modo API');
+            
+            // Re-inicializar managers con nuevo storage
+            this.notesManager.setStorage(this.storage);
+            this.syncManager = new SyncManager(this.storage, this.notesManager);
+            
+            this.showMessage('Modo online activado');
         } catch (error) {
             console.error('Error cambiando a API storage:', error);
             this.showError('Error al conectar con la API');
@@ -373,14 +364,12 @@ export class MizuNotesApp {
 
     async switchToLocalStorage() {
         this.storage = new LocalStorage();
-        await this.reinitializeApp();
-        this.showMessage('Cambiado a modo local');
-    }
-
-    async reinitializeApp() {
-        this.syncManager.stopSyncInterval();
-        await this.initializeManagers();
-        await this.loadInitialData();
+        
+        // Re-inicializar managers con storage local
+        this.notesManager.setStorage(this.storage);
+        this.syncManager = new SyncManager(this.storage, this.notesManager);
+        
+        this.showMessage('Modo local activado');
     }
 }
 
