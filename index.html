@@ -297,7 +297,7 @@
             async socialLogin(provider) {
                 this.showMessage(`🔗 Conectando con ${provider}...`, 'info');
                 
-                const result = await this.auth.signInWithProvider(provider);
+                const result = await this.auth.signInWithProvider(provider, 'https://mizulegendsstudios.github.io/mizu_notes/auth/callback.html');
                 if (result.success && result.url) {
                     // Redirigir a OAuth
                     window.location.href = result.url;
@@ -330,4 +330,3 @@
    </script>
 </body>
 </html>
-

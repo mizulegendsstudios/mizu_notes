@@ -43,6 +43,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -54,7 +55,7 @@
     </div>
 
     <script type="module">
-        import { SupabaseAuth } from '../src/frontend/core/auth/SupabaseClient.js';
+        import { SupabaseAuth } from './src/frontend/core/auth/SupabaseClient.js';
 
         async function handleOAuthCallback() {
             try {
@@ -64,7 +65,7 @@
                 if (result.success) {
                     // Redirigir a la aplicación principal después de 2 segundos
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = 'https://mizulegendsstudios.github.io/mizu_notes';
                     }, 2000);
                 } else {
                     showError(result.error || 'Error desconocido en autenticación');
@@ -80,7 +81,7 @@
                 <div class="container">
                     <h2 style="color: #ff6b6b;">❌ Error de autenticación</h2>
                     <p>${message}</p>
-                    <button onclick="window.location.href='/'">Volver a la aplicación</button>
+                    <button onclick="window.location.href='https://mizulegendsstudios.github.io/mizu_notes'">Volver a la aplicación</button>
                 </div>
             `;
         }
@@ -90,4 +91,3 @@
     </script>
 </body>
 </html>
-
