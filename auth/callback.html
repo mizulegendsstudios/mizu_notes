@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Autenticando...</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            background: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <h2>🔄 Autenticando...</h2>
+        <p>Por favor espera mientras completamos tu login.</p>
+    </div>
+
+    <script>
+        // Este script maneja el callback de OAuth
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const error = hashParams.get('error_description');
+
+        if (accessToken) {
+            // Login exitoso - redirigir a la app principal
+            localStorage.setItem('mizu_auth_token', accessToken);
+            window.location.href = '/';
+        } else if (error) {
+            // Error en login - mostrar mensaje
+            alert('Error de autenticación: ' + error);
+            window.location.href = '/';
+        } else {
+            // Sin token ni error - redirigir
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

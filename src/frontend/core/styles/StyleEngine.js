@@ -417,6 +417,18 @@ export class StyleEngine {
         }
       `,
 
+      // Estilo para botón cuando el usuario está logeado
+      toolbarBtnLoggedIn: `
+        background: #4CAF50 !important;
+        color: white !important;
+        border-color: #45a049 !important;
+        
+        &:hover {
+          background: #45a049 !important;
+          transform: translateY(-1px);
+        }
+      `,
+
       toolbarBtnPrimary: `
         background: var(--primary-color);
         color: white;
@@ -695,6 +707,140 @@ export class StyleEngine {
 
       autoSaveVisible: `
         opacity: 1;
+      `,
+
+      // Modal de Login
+      loginModal: `
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      `,
+
+      loginModalActive: `
+        display: flex;
+      `,
+
+      loginContent: `
+        background: var(--bg-white);
+        padding: 30px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-hover);
+        width: 90%;
+        max-width: 400px;
+        animation: fadeIn 0.3s ease-out;
+      `,
+
+      loginTabs: `
+        display: flex;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--bg-light);
+      `,
+
+      loginTab: `
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        font-weight: 600;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: var(--transition);
+      `,
+
+      loginTabActive: `
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--primary-color);
+      `,
+
+      loginForm: `
+        display: none;
+      `,
+
+      loginFormActive: `
+        display: block;
+      `,
+
+      formGroup: `
+        margin-bottom: 15px;
+      `,
+
+      formGroupLabel: `
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: var(--text-dark);
+      `,
+
+      formGroupInput: `
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        transition: var(--transition);
+        
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color);
+        }
+      `,
+
+      loginBtn: `
+        width: 100%;
+        padding: 12px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        
+        &:hover {
+          background: var(--primary-dark);
+        }
+      `,
+
+      socialLogin: `
+        margin-top: 20px;
+        text-align: center;
+      `,
+
+      socialBtn: `
+        width: 100%;
+        padding: 12px;
+        margin: 5px 0;
+        border: 2px solid #e0e0e0;
+        background: white;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        
+        &:hover {
+          background: var(--bg-light);
+        }
+      `,
+
+      closeModal: `
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-light);
       `
     };
 
@@ -713,6 +859,7 @@ export class StyleEngine {
       container: '.container',
       toolbar: '.toolbar',
       toolbarBtn: '.toolbar-btn',
+      toolbarBtnLoggedIn: '.toolbar-btn.logged-in',
       toolbarBtnPrimary: '.toolbar-btn.primary',
       toolbarBtnDanger: '.toolbar-btn.danger',
       statusIndicator: '.status-indicator',
@@ -741,7 +888,22 @@ export class StyleEngine {
       emptyState: '.empty-state',
       emptyStateIcon: '.empty-state-icon',
       autoSave: '.auto-save',
-      autoSaveVisible: '.auto-save.visible'
+      autoSaveVisible: '.auto-save.visible',
+      loginModal: '.login-modal',
+      loginModalActive: '.login-modal.active',
+      loginContent: '.login-content',
+      loginTabs: '.login-tabs',
+      loginTab: '.login-tab',
+      loginTabActive: '.login-tab.active',
+      loginForm: '.login-form',
+      loginFormActive: '.login-form.active',
+      formGroup: '.form-group',
+      formGroupLabel: '.form-group label',
+      formGroupInput: '.form-group input',
+      loginBtn: '.login-btn',
+      socialLogin: '.social-login',
+      socialBtn: '.social-btn',
+      closeModal: '.close-modal'
     };
 
     const selector = selectors[componentName] || `.${componentName}`;
@@ -785,6 +947,11 @@ export class StyleEngine {
           gap: var(--spacing-sm);
           text-align: center;
         }
+        
+        .login-content {
+          width: 95%;
+          padding: 20px;
+        }
       }
 
       @media (max-width: 480px) {
@@ -809,6 +976,16 @@ export class StyleEngine {
         .stats {
           grid-template-columns: 1fr;
           gap: var(--spacing-xs);
+        }
+        
+        .login-content {
+          width: 98%;
+          padding: 15px;
+        }
+        
+        .login-tab {
+          padding: 8px 15px;
+          font-size: var(--font-size-sm);
         }
       }
     `;
