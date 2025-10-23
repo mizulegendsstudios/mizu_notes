@@ -1,34 +1,34 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mizu Notes - Bloc de Notas Offline</title>
-    <!-- No hay CSS aquí - se genera dinámicamente -->
+    <!-- No hay CSS aquÃ­ - se genera dinÃ¡micamente -->
 </head>
 <body>
     <div class="container animate-fadeIn">
         <h1 class="text-gradient">Mizu Notes</h1>
-        <p class="subtitle text-center">Bloc de notas offline-first con sincronización inteligente</p>
+        <p class="subtitle text-center">Bloc de notas offline-first con sincronizaciÃ³n inteligente</p>
 
         <!-- Barra de herramientas -->
         <div class="toolbar">
             <button class="toolbar-btn primary" id="newNoteBtn">
-                📄 Nueva Nota
+                ðŸ“„ Nueva Nota
             </button>
             <button class="toolbar-btn danger" id="deleteNoteBtn">
-                🗑️ Eliminar
+                ðŸ—‘ï¸ Eliminar
             </button>
             <button class="toolbar-btn" id="exportBtn">
-                📤 Exportar
+                ðŸ“¤ Exportar
             </button>
             <button class="toolbar-btn" id="importBtn">
-                📥 Importar
+                ðŸ“¥ Importar
             </button>
             
-            <!-- Botón de Login agregado -->
+            <!-- BotÃ³n de Login agregado -->
             <button class="toolbar-btn" id="loginBtn">
-                👤 Login
+                ðŸ‘¤ Login
             </button>
             
             <div class="status-indicator">
@@ -43,11 +43,11 @@
             <div class="notes-sidebar">
                 <div class="search-box">
                     <input type="text" id="searchInput" class="search-input" placeholder="Buscar notas...">
-                    <div class="search-icon">🔍</div>
+                    <div class="search-icon">ðŸ”</div>
                 </div>
                 
                 <div class="notes-list" id="notesList">
-                    <!-- Las notas se cargarán aquí -->
+                    <!-- Las notas se cargarÃ¡n aquÃ­ -->
                 </div>
 
                 <div class="stats">
@@ -68,24 +68,24 @@
                     type="text" 
                     id="noteTitle" 
                     class="note-title-input" 
-                    placeholder="Título de la note..."
+                    placeholder="TÃ­tulo de la note..."
                     maxlength="100"
                 >
                 <textarea 
                     id="noteContent" 
                     class="note-content" 
-                    placeholder="Escribe tu nota aquí..."
+                    placeholder="Escribe tu nota aquÃ­..."
                     spellcheck="true"
                 ></textarea>
                 
                 <div class="note-info">
                     <div>
                         <span id="charCount">0 caracteres</span>
-                        <span> • </span>
+                        <span> â€¢ </span>
                         <span id="wordCount">0 palabras</span>
                     </div>
-                    <div class="auto-save" id="autoSaveIndicator">✓ Guardado</div>
-                    <div id="lastSaved">Última edición: nunca</div>
+                    <div class="auto-save" id="autoSaveIndicator">âœ“ Guardado</div>
+                    <div id="lastSaved">Ãšltima ediciÃ³n: nunca</div>
                 </div>
             </div>
         </div>
@@ -97,10 +97,10 @@
     <!-- Modal de Login/Registro -->
     <div id="loginModal" class="login-modal">
         <div class="login-content">
-            <button class="close-modal" id="closeLoginModal">×</button>
+            <button class="close-modal" id="closeLoginModal">Ã—</button>
             
             <div class="login-tabs">
-                <button class="login-tab active" data-tab="login">Iniciar Sesión</button>
+                <button class="login-tab active" data-tab="login">Iniciar SesiÃ³n</button>
                 <button class="login-tab" data-tab="register">Registrarse</button>
             </div>
 
@@ -111,17 +111,17 @@
                     <input type="email" id="loginEmail" placeholder="tu@email.com" required>
                 </div>
                 <div class="form-group">
-                    <label for="loginPassword">Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Tu contraseña" required>
+                    <label for="loginPassword">ContraseÃ±a</label>
+                    <input type="password" id="loginPassword" placeholder="Tu contraseÃ±a" required>
                 </div>
-                <button type="submit" class="login-btn">Iniciar Sesión</button>
+                <button type="submit" class="login-btn">Iniciar SesiÃ³n</button>
                 
                 <div class="social-login">
                     <button type="button" class="social-btn" id="googleLogin">
-                        <span>🔐</span> Continuar con Google
+                        <span>ðŸ”</span> Continuar con Google
                     </button>
                     <button type="button" class="social-btn" id="githubLogin">
-                        <span>🐙</span> Continuar con GitHub
+                        <span>ðŸ™</span> Continuar con GitHub
                     </button>
                 </div>
             </form>
@@ -137,17 +137,17 @@
                     <input type="email" id="registerEmail" placeholder="tu@email.com" required>
                 </div>
                 <div class="form-group">
-                    <label for="registerPassword">Contraseña</label>
-                    <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    <label for="registerPassword">ContraseÃ±a</label>
+                    <input type="password" id="registerPassword" placeholder="MÃ­nimo 6 caracteres" required minlength="6">
                 </div>
                 <button type="submit" class="login-btn">Crear Cuenta</button>
                 
                 <div class="social-login">
                     <button type="button" class="social-btn" id="googleRegister">
-                        <span>🔐</span> Registrarse con Google
+                        <span>ðŸ”</span> Registrarse con Google
                     </button>
                     <button type="button" class="social-btn" id="githubRegister">
-                        <span>🐙</span> Registrarse con GitHub
+                        <span>ðŸ™</span> Registrarse con GitHub
                     </button>
                 </div>
             </form>
@@ -161,7 +161,7 @@
         // Importar Supabase
         import { SupabaseAuth } from './src/frontend/core/auth/SupabaseClient.js';
 
-        // Sistema de Autenticación - Modal
+        // Sistema de AutenticaciÃ³n - Modal
         class AuthModal {
             constructor() {
                 this.modal = document.getElementById('loginModal');
@@ -179,20 +179,20 @@
 
             updateUIForLoggedInUser(user) {
                 const loginBtn = document.getElementById('loginBtn');
-                loginBtn.innerHTML = `👤 ${user.email}`;
-                loginBtn.title = `Cerrar sesión (${user.email})`;
+                loginBtn.innerHTML = `ðŸ‘¤ ${user.email}`;
+                loginBtn.title = `Cerrar sesiÃ³n (${user.email})`;
                 
-                // Cambiar el comportamiento del botón para logout
+                // Cambiar el comportamiento del botÃ³n para logout
                 loginBtn.onclick = () => this.handleLogout();
                 
-                // Agregar estilo diferente para indicar que está logeado
+                // Agregar estilo diferente para indicar que estÃ¡ logeado
                 loginBtn.classList.add('logged-in');
             }
 
             updateUIForLoggedOut() {
                 const loginBtn = document.getElementById('loginBtn');
-                loginBtn.innerHTML = '👤 Login';
-                loginBtn.title = 'Iniciar sesión';
+                loginBtn.innerHTML = 'ðŸ‘¤ Login';
+                loginBtn.title = 'Iniciar sesiÃ³n';
                 loginBtn.onclick = () => this.show();
                 loginBtn.classList.remove('logged-in');
             }
@@ -201,12 +201,12 @@
                 const result = await this.auth.signOut();
                 if (result.success) {
                     this.updateUIForLoggedOut();
-                    this.showMessage('✅ Sesión cerrada correctamente', 'success');
+                    this.showMessage('âœ… SesiÃ³n cerrada correctamente', 'success');
                     
-                    // Recargar la página para limpiar estado
+                    // Recargar la pÃ¡gina para limpiar estado
                     setTimeout(() => location.reload(), 1000);
                 } else {
-                    this.showMessage(`❌ Error: ${result.error}`, 'error');
+                    this.showMessage(`âŒ Error: ${result.error}`, 'error');
                 }
             }
 
@@ -264,15 +264,15 @@
                 const email = document.getElementById('loginEmail').value;
                 const password = document.getElementById('loginPassword').value;
                 
-                this.showMessage('🔐 Conectando...', 'info');
+                this.showMessage('ðŸ” Conectando...', 'info');
                 
                 const result = await this.auth.signIn(email, password);
                 if (result.success) {
-                    this.showMessage('✅ ¡Bienvenido!', 'success');
+                    this.showMessage('âœ… Â¡Bienvenido!', 'success');
                     this.updateUIForLoggedInUser(result.user);
                     this.hide();
                 } else {
-                    this.showMessage(`❌ ${result.error}`, 'error');
+                    this.showMessage(`âŒ ${result.error}`, 'error');
                 }
             }
 
@@ -282,27 +282,27 @@
                 const email = document.getElementById('registerEmail').value;
                 const password = document.getElementById('registerPassword').value;
                 
-                this.showMessage('📝 Creando cuenta...', 'info');
+                this.showMessage('ðŸ“ Creando cuenta...', 'info');
                 
                 const result = await this.auth.signUp(email, password, name);
                 if (result.success) {
-                    this.showMessage(result.message || '✅ ¡Cuenta creada!', 'success');
-                    // Cambiar a pestaña de login
+                    this.showMessage(result.message || 'âœ… Â¡Cuenta creada!', 'success');
+                    // Cambiar a pestaÃ±a de login
                     document.querySelector('.login-tab[data-tab="login"]').click();
                 } else {
-                    this.showMessage(`❌ ${result.error}`, 'error');
+                    this.showMessage(`âŒ ${result.error}`, 'error');
                 }
             }
 
             async socialLogin(provider) {
-                this.showMessage(`🔗 Conectando con ${provider}...`, 'info');
+                this.showMessage(`ðŸ”— Conectando con ${provider}...`, 'info');
                 
                 const result = await this.auth.signInWithProvider(provider);
                 if (result.success && result.url) {
                     // Redirigir a OAuth
                     window.location.href = result.url;
                 } else {
-                    this.showMessage(`❌ Error: ${result.error}`, 'error');
+                    this.showMessage(`âŒ Error: ${result.error}`, 'error');
                 }
             }
 
@@ -318,11 +318,11 @@
             }
         }
 
-        // Inicializar el modal cuando cargue la página
+        // Inicializar el modal cuando cargue la pÃ¡gina
         document.addEventListener('DOMContentLoaded', () => {
             const authModal = new AuthModal();
             
-            // Conectar el botón de login (solo si no está logeado)
+            // Conectar el botÃ³n de login (solo si no estÃ¡ logeado)
             document.getElementById('loginBtn').addEventListener('click', () => {
                 authModal.show();
             });
