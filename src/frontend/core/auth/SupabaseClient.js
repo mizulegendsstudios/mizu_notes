@@ -5,6 +5,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL = 'https://isjfnbzyoadoycqkesnr.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzamZuYnp5b2Fkb3ljcWtlc25yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMjM3NzYsImV4cCI6MjA3NTY5OTc3Nn0.SxwL0joEKeN26X7BcwetbnhU3O0OlWFl-LNz_HIVbYI'
 
+// URL absoluta para GitHub Pages
+const GITHUB_PAGES_URL = 'https://mizulegendsstudios.github.io/mizu_notes'
+
 // Se crea el cliente de Supabase con la configuración de autenticación mejorada
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -13,7 +16,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: true,     // Detecta la sesión en la URL para callbacks de OAuth
     flowType: 'pkce',             // Usa el flujo PKCE para mayor seguridad en OAuth
     // redirectTo global para callbacks de autenticación
-    redirectTo: 'https://mizu-notes.vercel.app/auth/callback.html'
+    redirectTo: `${GITHUB_PAGES_URL}/auth/callback.html`
   }
 })
 
@@ -73,8 +76,8 @@ export class SupabaseAuth {
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: provider,
                 options: {
-                    // El redirectTo aquí es dinámico y sobrescribe el global para este llamado
-                    redirectTo: `${window.location.origin}/auth/callback.html`
+                    // URL absoluta para GitHub Pages
+                    redirectTo: `${GITHUB_PAGES_URL}/auth/callback.html`
                 }
             })
             
