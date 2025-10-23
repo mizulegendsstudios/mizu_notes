@@ -1,10 +1,10 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN CORREGIDA
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN PRODUCCIÓN
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
-    constructor(baseURL = 'http://localhost:3000/api') {
+    constructor(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
         this.baseURL = baseURL;
         this.token = null;
         this.isOnline = false;
