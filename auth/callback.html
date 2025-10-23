@@ -45,6 +45,12 @@
             font-weight: bold;
             margin-top: 20px;
         }
+        .success {
+            color: #4bb543;
+        }
+        .error {
+            color: #ff6b6b;
+        }
     </style>
 </head>
 <body>
@@ -55,20 +61,54 @@
     </div>
 
     <script type="module">
-        import { SupabaseAuth } from '../src/frontend/core/auth/SupabaseClient.js';
+        // Importar Supabase directamente
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+        // Configurar Supabase
+        const supabase = createClient(
+            'https://isjfnbzyoadoycqkesnr.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzamZuYnp5b2Fkb3ljcWtlc25yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMjM3NzYsImV4cCI6MjA3NTY5OTc3Nn0.SxwL0joEKeN26X7BcwetbnhU3O0OlWFl-LNz_HIVbYI',
+            {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                    detectSessionInUrl: true
+                }
+            }
+        )
 
         async function handleOAuthCallback() {
             try {
-                const auth = new SupabaseAuth();
-                const result = await auth.handleOAuthCallback();
+                console.log('Procesando callback OAuth...');
                 
-                if (result.success) {
-                    // Redirigir a la aplicación principal después de 2 segundos
+                // Obtener la sesión actual
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('Error obteniendo sesión:', error);
+                    throw error;
+                }
+                
+                if (session) {
+                    console.log('✅ Sesión obtenida correctamente:', session.user.email);
+                    
+                    // Actualizar UI para mostrar éxito
+                    document.querySelector('.container').innerHTML = `
+                        <div class="success">
+                            <h2>✅ ¡Autenticación exitosa!</h2>
+                            <p>Bienvenido/a, ${session.user.email}</p>
+                            <p>Redirigiendo a la aplicación...</p>
+                        </div>
+                    `;
+                    
+                    // Redirigir a la aplicación principal después de 3 segundos
                     setTimeout(() => {
                         window.location.href = 'https://mizulegendsstudios.github.io/mizu_notes';
-                    }, 2000);
+                    }, 3000);
+                    
                 } else {
-                    showError(result.error || 'Error desconocido en autenticación');
+                    console.warn('No se pudo obtener la sesión');
+                    showError('No se pudo completar la autenticación. Por favor intenta nuevamente.');
                 }
             } catch (error) {
                 console.error('Error en callback OAuth:', error);
@@ -79,9 +119,11 @@
         function showError(message) {
             document.body.innerHTML = `
                 <div class="container">
-                    <h2 style="color: #ff6b6b;">❌ Error de autenticación</h2>
+                    <h2 class="error">❌ Error de autenticación</h2>
                     <p>${message}</p>
-                    <button onclick="window.location.href='https://mizulegendsstudios.github.io/mizu_notes'">Volver a la aplicación</button>
+                    <button onclick="window.location.href='https://mizulegendsstudios.github.io/mizu_notes'">
+                        Volver a la aplicación
+                    </button>
                 </div>
             `;
         }
