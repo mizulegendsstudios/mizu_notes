@@ -1,4 +1,4 @@
-// src/frontend/app.js
+// src/frontend/app.js - VERSIÓN MEJORADA
 import { LocalStorage } from './core/storage/LocalStorage.js';
 import { ApiStorage } from './core/storage/ApiStorage.js';
 import { NotesManager } from './core/services/NotesManager.js';
@@ -21,10 +21,11 @@ export class MizuNotesApp {
 
     async initializeApp() {
         try {
-            // Primero inicializar el motor de estilos
-            await this.initializeStyleEngine();
+            // PRIMERO: Inicializar sesión si existe
+            await this.initializeSession();
             
-            // Luego el resto de la aplicación
+            // LUEGO: Inicializar el resto
+            await this.initializeStyleEngine();
             await this.initializeStorage();
             await this.initializeManagers();
             await this.initializeUI();
@@ -35,6 +36,22 @@ export class MizuNotesApp {
         } catch (error) {
             console.error('Error inicializando la aplicación:', error);
             this.showError('Error al inicializar la aplicación');
+        }
+    }
+
+    // NUEVO: Inicializar gestión de sesiones
+    async initializeSession() {
+        // Si estás usando Supabase Auth
+        if (window.supabaseAuth) {
+            const sessionResult = await window.supabaseAuth.initializeSession();
+            if (sessionResult.success && sessionResult.user) {
+                console.log('✅ Sesión de usuario restaurada:', sessionResult.user.email);
+                
+                // Configurar ApiStorage con el usuario autenticado
+                if (this.storage && this.storage.setAuthToken) {
+                    this.storage.setAuthToken(sessionResult.session.access_token);
+                }
+            }
         }
     }
 
@@ -51,7 +68,14 @@ export class MizuNotesApp {
     }
 
     async initializeStorage() {
-        this.storage = new LocalStorage();
+        // Verificar si hay usuario autenticado para decidir qué storage usar
+        const hasAuth = localStorage.getItem('mizu_auth_token');
+        if (hasAuth) {
+            this.storage = new ApiStorage();
+            await this.storage.initialize();
+        } else {
+            this.storage = new LocalStorage();
+        }
     }
 
     async initializeManagers() {
@@ -250,15 +274,92 @@ export class MizuNotesApp {
         document.getElementById('importBtn').addEventListener('click', () => this.importNotes());
     }
 
+    // MEJORADO: Setup de event listeners globales
     setupGlobalEventListeners() {
         window.addEventListener('beforeunload', () => this.forceSave());
         window.addEventListener('error', (event) => {
             console.error('Error no capturado:', event.error);
         });
+        
+        // NUEVO: Eventos de autenticación
+        window.addEventListener('mizu:userLoggedIn', (event) => {
+            this.handleUserLogin(event.detail.user);
+        });
+        
+        window.addEventListener('mizu:userLoggingOut', () => {
+            this.handleUserLogout();
+        });
+        
+        window.addEventListener('mizu:sessionRestored', (event) => {
+            this.handleSessionRestored(event.detail.user);
+        });
+
+        window.addEventListener('mizu:authError', () => {
+            this.handleAuthError();
+        });
+    }
+
+    // NUEVO: Manejar login de usuario
+    async handleUserLogin(user) {
+        try {
+            this.showMessage(`¡Bienvenido ${user.email}!`);
+            
+            // Cambiar a ApiStorage si no está configurado
+            if (!(this.storage instanceof ApiStorage)) {
+                await this.switchToApiStorage();
+            }
+            
+            // Sincronizar datos
+            await this.syncManager.trySync();
+            
+        } catch (error) {
+            console.error('Error en post-login:', error);
+        }
+    }
+
+    // NUEVO: Manejar logout de usuario
+    async handleUserLogout() {
+        try {
+            // Cambiar a LocalStorage
+            await this.switchToLocalStorage();
+            
+            // Limpiar UI
+            this.notesManager.clearNotes();
+            this.notesManager.setCurrentNote(null);
+            
+            this.showMessage('Sesión cerrada correctamente');
+            
+        } catch (error) {
+            console.error('Error en post-logout:', error);
+        }
+    }
+
+    // NUEVO: Manejar sesión restaurada
+    async handleSessionRestored(user) {
+        console.log('Sesión restaurada para:', user.email);
+        
+        if (this.storage && this.storage.setAuthToken) {
+            // Obtener el token de Supabase
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                this.storage.setAuthToken(session.access_token);
+                
+                // Sincronizar en segundo plano
+                setTimeout(() => {
+                    this.syncManager.trySync();
+                }, 2000);
+            }
+        }
+    }
+
+    // NUEVO: Manejar error de autenticación
+    async handleAuthError() {
+        this.showError('Error de autenticación - Cambiando a modo local');
+        await this.switchToLocalStorage();
     }
 
     // Método para cambiar entre almacenamiento local y API
-    async switchToApiStorage(baseURL) {
+    async switchToApiStorage(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
         try {
             this.storage = new ApiStorage(baseURL);
             await this.storage.initialize();

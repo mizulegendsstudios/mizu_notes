@@ -1,4 +1,4 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN CON GESTIÓN DE USUARIOS
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN MEJORADA
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
@@ -51,8 +51,10 @@ export class ApiStorage {
 
     clearLocalNotes() {
         // Limpiar solo las notas del usuario actual del localStorage
-        const userNotesKey = `mizu_notes_${this.currentUserId}`;
-        localStorage.removeItem(userNotesKey);
+        if (this.currentUserId) {
+            const userNotesKey = `mizu_notes_${this.currentUserId}`;
+            localStorage.removeItem(userNotesKey);
+        }
         
         // También limpiar notas globales (para compatibilidad)
         localStorage.removeItem('mizu_notes');
@@ -311,17 +313,73 @@ export class ApiStorage {
         }
     }
 
+    // MEJORADO: Sincronización post-login con fusión inteligente
     async syncAfterLogin() {
         try {
             notificationService.info('Sincronizando notas...');
-            // Forzar recarga de notas desde el servidor
+            
+            // 1. Obtener notas del servidor
+            const serverNotes = await this.getNotes();
+            
+            // 2. Obtener notas locales (si existen)
+            const localNotes = this.getLocalNotes();
+            
+            // 3. Resolver conflictos y fusionar
+            const mergedNotes = this.mergeNotes(serverNotes, localNotes);
+            
+            // 4. Actualizar el notesManager
             const notesManager = window.app?.notesManager;
             if (notesManager) {
-                await notesManager.loadNotes();
+                // Limpiar notas actuales y cargar las fusionadas
+                notesManager.clearNotes();
+                mergedNotes.forEach(note => {
+                    notesManager.notes.set(note.id, note);
+                });
+                
+                // Establecer última nota editada como actual
+                if (mergedNotes.size > 0) {
+                    const lastEdited = Array.from(mergedNotes.values())
+                        .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+                    notesManager.setCurrentNote(lastEdited.id);
+                }
+                
+                // Forzar actualización de UI
+                notesManager.notifyUpdate();
             }
+            
+            notificationService.success('Sincronización completada');
+            
         } catch (error) {
             console.error('Error en sincronización post-login:', error);
+            notificationService.warning('Sincronización parcial - usando notas locales');
         }
+    }
+
+    // NUEVO: Fusión inteligente de notas
+    mergeNotes(serverNotes, localNotes) {
+        const merged = new Map();
+        
+        // Priorizar notas del servidor
+        serverNotes.forEach((note, id) => {
+            merged.set(id, note);
+        });
+        
+        // Agregar notas locales que no existen en el servidor
+        localNotes.forEach((localNote, localId) => {
+            if (!merged.has(localId)) {
+                // Es una nota local nueva
+                merged.set(localId, localNote);
+            } else {
+                // Resolver conflicto: usar la versión más reciente
+                const serverNote = merged.get(localId);
+                if (localNote.updatedAt > serverNote.updatedAt) {
+                    merged.set(localId, localNote);
+                }
+            }
+        });
+        
+        console.log(`✅ Fusión completada: ${merged.size} notas`);
+        return merged;
     }
 
     async register(userData) {

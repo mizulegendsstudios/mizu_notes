@@ -39,6 +39,12 @@ export class SupabaseAuth {
             
             this.user = data.user
             this.session = data.session
+            
+            // Disparar evento de login exitoso para sincronización
+            window.dispatchEvent(new CustomEvent('mizu:userLoggedIn', {
+                detail: { user: data.user }
+            }));
+            
             return { success: true, user: data.user }
         } catch (error) {
             return { success: false, error: error.message }
@@ -89,18 +95,44 @@ export class SupabaseAuth {
         }
     }
 
-    // Cerrar sesión
+    // MEJORADO: Cerrar sesión con limpieza
     async signOut() {
         try {
+            // Disparar evento antes de cerrar sesión
+            window.dispatchEvent(new CustomEvent('mizu:userLoggingOut'));
+            
             const { error } = await this.supabase.auth.signOut()
             if (error) throw error
             
             this.user = null
             this.session = null
+            
+            // Limpieza completa
+            this.cleanupAfterLogout();
+            
             return { success: true }
         } catch (error) {
             return { success: false, error: error.message }
         }
+    }
+
+    cleanupAfterLogout() {
+        // Limpiar datos específicos de usuario
+        const userKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('mizu_')) {
+                userKeys.push(key);
+            }
+        }
+        
+        userKeys.forEach(key => {
+            if (!key.includes('mizuNotes-theme')) { // Preservar preferencias de tema
+                localStorage.removeItem(key);
+            }
+        });
+        
+        console.log('✅ Sesión limpiada completamente');
     }
 
     // Verificar sesión actual
@@ -113,6 +145,33 @@ export class SupabaseAuth {
             return { success: true, user }
         } catch (error) {
             return { success: false, error: error.message }
+        }
+    }
+
+    // NUEVO: Verificar y restaurar sesión al cargar la app
+    async initializeSession() {
+        try {
+            const { data: { session }, error } = await this.supabase.auth.getSession();
+            
+            if (error) throw error;
+            
+            if (session) {
+                this.session = session;
+                const { data: { user } } = await this.supabase.auth.getUser();
+                this.user = user;
+                
+                // Disparar evento de sesión restaurada
+                window.dispatchEvent(new CustomEvent('mizu:sessionRestored', {
+                    detail: { user }
+                }));
+                
+                return { success: true, user, session };
+            }
+            
+            return { success: false, user: null, session: null };
+        } catch (error) {
+            console.error('Error inicializando sesión:', error);
+            return { success: false, error: error.message };
         }
     }
 }
