@@ -2,36 +2,33 @@
   "version": 2,
   "builds": [
     {
-      "src": "**/*.html",
+      "src": "index.html",
       "use": "@vercel/static"
     },
     {
       "src": "src/frontend/**/*.js",
       "use": "@vercel/static"
+    },
+    {
+      "src": "src/backend/server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/src/frontend/(.*\\.js)",
+      "src": "/src/frontend/(.*)",
       "headers": {
         "Content-Type": "application/javascript"
-      },
-      "continue": true
+      }
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/src/backend/server.js"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
   ],
-  "headers": [
-    {
-      "source": "/src/frontend/(.*\\.js)",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        }
-      ]
-    }
-  ]
+  "outputDirectory": "."
 }
