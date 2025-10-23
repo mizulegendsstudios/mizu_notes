@@ -1,4 +1,4 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN PRODUCCIÓN
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN CON GESTIÓN DE USUARIOS
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
@@ -7,6 +7,7 @@ export class ApiStorage {
     constructor(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
         this.baseURL = baseURL;
         this.token = null;
+        this.currentUserId = null;
         this.isOnline = false;
         this.pendingRequests = [];
     }
@@ -16,9 +17,47 @@ export class ApiStorage {
         console.log('ApiStorage: Token de autenticación configurado');
         if (token) {
             localStorage.setItem('mizu_auth_token', token);
+            // Intentar obtener el usuario actual cuando se establece el token
+            this.getCurrentUserInfo();
         } else {
-            localStorage.removeItem('mizu_auth_token');
+            this.clearUserData();
         }
+    }
+
+    async getCurrentUserInfo() {
+        try {
+            const profile = await this.getProfile();
+            if (profile) {
+                this.currentUserId = profile.id;
+                localStorage.setItem('mizu_current_user_id', profile.id);
+                console.log('ApiStorage: Usuario actual establecido:', profile.email);
+            }
+        } catch (error) {
+            console.warn('No se pudo obtener información del usuario:', error);
+        }
+    }
+
+    clearUserData() {
+        this.token = null;
+        this.currentUserId = null;
+        localStorage.removeItem('mizu_auth_token');
+        localStorage.removeItem('mizu_current_user_id');
+        
+        // Limpiar notas locales al cerrar sesión
+        this.clearLocalNotes();
+        
+        console.log('ApiStorage: Datos de usuario limpiados');
+    }
+
+    clearLocalNotes() {
+        // Limpiar solo las notas del usuario actual del localStorage
+        const userNotesKey = `mizu_notes_${this.currentUserId}`;
+        localStorage.removeItem(userNotesKey);
+        
+        // También limpiar notas globales (para compatibilidad)
+        localStorage.removeItem('mizu_notes');
+        
+        console.log('ApiStorage: Notas locales limpiadas');
     }
 
     async makeRequest(endpoint, options = {}) {
@@ -65,61 +104,142 @@ export class ApiStorage {
 
     async getNotes() {
         try {
-            const result = await this.makeRequest('/notes');
+            // Si hay usuario autenticado, obtener notas del backend
+            if (this.token && this.currentUserId) {
+                const result = await this.makeRequest('/notes');
+                
+                // Convertir array de objetos a Map de instancias Note
+                const notesMap = new Map();
+                if (result.data && Array.isArray(result.data)) {
+                    result.data.forEach(noteData => {
+                        const note = new Note(
+                            noteData.id,
+                            noteData.title,
+                            noteData.content,
+                            noteData.createdAt || noteData.created_at,
+                            noteData.updatedAt || noteData.updated_at,
+                            noteData.version
+                        );
+                        notesMap.set(note.id, note);
+                    });
+                }
+                
+                // Guardar en localStorage como respaldo
+                this.saveNotesToLocalStorage(notesMap);
+                
+                return notesMap;
+            } else {
+                // Usuario no autenticado - usar notas locales
+                return this.getLocalNotes();
+            }
+        } catch (error) {
+            console.error('Error obteniendo notas del servidor, usando locales:', error);
+            // Fallback a notas locales si el servidor falla
+            return this.getLocalNotes();
+        }
+    }
+
+    getLocalNotes() {
+        try {
+            // Intentar obtener notas específicas del usuario
+            const userNotesKey = `mizu_notes_${this.currentUserId}`;
+            let notesData = localStorage.getItem(userNotesKey);
             
-            // Convertir array de objetos a Map de instancias Note
+            // Fallback a notas globales si no hay específicas del usuario
+            if (!notesData) {
+                notesData = localStorage.getItem('mizu_notes');
+            }
+            
             const notesMap = new Map();
-            if (result.data && Array.isArray(result.data)) {
-                result.data.forEach(noteData => {
-                    const note = new Note(
-                        noteData.id,
-                        noteData.title,
-                        noteData.content,
-                        noteData.createdAt || noteData.created_at,
-                        noteData.updatedAt || noteData.updated_at,
-                        noteData.version
-                    );
-                    notesMap.set(note.id, note);
-                });
+            if (notesData) {
+                const parsed = JSON.parse(notesData);
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(noteData => {
+                        const note = new Note(
+                            noteData.id,
+                            noteData.title,
+                            noteData.content,
+                            noteData.createdAt,
+                            noteData.updatedAt,
+                            noteData.version
+                        );
+                        notesMap.set(note.id, note);
+                    });
+                }
             }
             
             return notesMap;
         } catch (error) {
-            console.error('Error obteniendo notas:', error);
-            throw error;
+            console.error('Error obteniendo notas locales:', error);
+            return new Map();
+        }
+    }
+
+    saveNotesToLocalStorage(notesMap) {
+        try {
+            const notesArray = Array.from(notesMap.values()).map(note => ({
+                id: note.id,
+                title: note.title,
+                content: note.content,
+                createdAt: note.createdAt,
+                updatedAt: note.updatedAt,
+                version: note.version
+            }));
+            
+            // Guardar en localStorage específico del usuario
+            if (this.currentUserId) {
+                const userNotesKey = `mizu_notes_${this.currentUserId}`;
+                localStorage.setItem(userNotesKey, JSON.stringify(notesArray));
+            }
+            
+            // También guardar en localStorage global (para compatibilidad)
+            localStorage.setItem('mizu_notes', JSON.stringify(notesArray));
+            
+        } catch (error) {
+            console.error('Error guardando notas en localStorage:', error);
         }
     }
 
     async saveNotes(notesMap) {
         try {
-            // En lugar de usar /notes/sync, guardamos cada nota individualmente
-            const notes = Array.from(notesMap.values());
-            const results = [];
-            
-            for (const note of notes) {
-                if (note.id && note.id.startsWith('local_')) {
-                    // Es una nota nueva local - usar POST
-                    const result = await this.createNote({
-                        title: note.title,
-                        content: note.content,
-                        version: note.version
-                    });
-                    results.push(result);
-                } else {
-                    // Nota existente - usar PUT
-                    const result = await this.updateNote(note.id, {
-                        title: note.title,
-                        content: note.content,
-                        version: note.version
-                    });
-                    results.push(result);
+            // Si hay usuario autenticado, sincronizar con el servidor
+            if (this.token && this.currentUserId) {
+                const notes = Array.from(notesMap.values());
+                const results = [];
+                
+                for (const note of notes) {
+                    if (note.id && note.id.startsWith('local_')) {
+                        // Es una nota nueva local - usar POST
+                        const result = await this.createNote({
+                            title: note.title,
+                            content: note.content,
+                            version: note.version
+                        });
+                        results.push(result);
+                    } else {
+                        // Nota existente - usar PUT
+                        const result = await this.updateNote(note.id, {
+                            title: note.title,
+                            content: note.content,
+                            version: note.version
+                        });
+                        results.push(result);
+                    }
                 }
+                
+                notificationService.success('Notas sincronizadas correctamente');
+                return results;
+            } else {
+                // Usuario no autenticado - solo guardar localmente
+                this.saveNotesToLocalStorage(notesMap);
+                notificationService.info('Notas guardadas localmente');
+                return [];
             }
-            
-            notificationService.success('Notas sincronizadas correctamente');
-            return results;
         } catch (error) {
             console.error('Error guardando notas:', error);
+            // Fallback a guardado local
+            this.saveNotesToLocalStorage(notesMap);
+            notificationService.warning('Notas guardadas localmente (sin sincronización)');
             throw error;
         }
     }
@@ -168,7 +288,7 @@ export class ApiStorage {
         }
     }
 
-    // Métodos de autenticación (sin cambios)
+    // Métodos de autenticación mejorados
     async login(email, password) {
         try {
             const result = await this.makeRequest('/auth/login', {
@@ -178,6 +298,8 @@ export class ApiStorage {
             
             if (result.data?.session?.access_token) {
                 this.setAuthToken(result.data.session.access_token);
+                // Sincronizar notas después del login
+                await this.syncAfterLogin();
             }
             
             notificationService.success('Inicio de sesión exitoso');
@@ -186,6 +308,19 @@ export class ApiStorage {
             console.error('Error en login:', error);
             notificationService.error('Error en inicio de sesión');
             throw error;
+        }
+    }
+
+    async syncAfterLogin() {
+        try {
+            notificationService.info('Sincronizando notas...');
+            // Forzar recarga de notas desde el servidor
+            const notesManager = window.app?.notesManager;
+            if (notesManager) {
+                await notesManager.loadNotes();
+            }
+        } catch (error) {
+            console.error('Error en sincronización post-login:', error);
         }
     }
 
@@ -211,13 +346,18 @@ export class ApiStorage {
                 method: 'POST'
             });
             
-            this.token = null;
-            localStorage.removeItem('mizu_auth_token');
+            this.clearUserData();
             notificationService.info('Sesión cerrada correctamente');
+            
+            // Recargar la aplicación para limpiar estado
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
         } catch (error) {
             console.error('Error en logout:', error);
-            this.token = null;
-            localStorage.removeItem('mizu_auth_token');
+            this.clearUserData();
+            notificationService.info('Sesión cerrada (sin conexión al servidor)');
             throw error;
         }
     }
@@ -234,9 +374,12 @@ export class ApiStorage {
 
     async initialize() {
         const savedToken = localStorage.getItem('mizu_auth_token');
+        const savedUserId = localStorage.getItem('mizu_current_user_id');
+        
         if (savedToken) {
             this.token = savedToken;
-            console.log('ApiStorage: Token recuperado de localStorage');
+            this.currentUserId = savedUserId;
+            console.log('ApiStorage: Usuario recuperado -', savedUserId);
         }
         
         console.log('ApiStorage: Inicialización completada');
