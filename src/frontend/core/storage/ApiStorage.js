@@ -1,4 +1,4 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN MEJORADA
+﻿// src/frontend/core/storage/ApiStorage.js - URL ACTUALIZADA
 import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
@@ -33,8 +33,7 @@ export class ApiStorage {
 
             console.log('🔧 Fetch config:', {
                 method: fetchOptions.method,
-                endpoint: endpoint,
-                hasAuth: !!this.token
+                endpoint: endpoint
             });
 
             const response = await fetch(url, fetchOptions);
@@ -45,7 +44,7 @@ export class ApiStorage {
             }
 
             const data = await response.json();
-            console.log('✅ Request exitoso:', data);
+            console.log('✅ Request exitoso');
             return data;
 
         } catch (error) {
@@ -56,7 +55,7 @@ export class ApiStorage {
 
     async getNotes() {
         try {
-            console.log('🔍 ApiStorage.getNotes - Iniciando...');
+            console.log('🔍 ApiStorage.getNotes - Obteniendo notas del servidor...');
             
             const result = await this.makeRequest('/notes');
             
@@ -82,11 +81,13 @@ export class ApiStorage {
             
             console.log('✅ Notas cargadas del servidor:', notesMap.size);
             this.saveNotesToLocalStorage(notesMap);
+            notificationService.success('Notas cargadas del servidor');
             return notesMap;
             
         } catch (error) {
             console.error('❌ Error obteniendo notas del servidor:', error);
             console.log('📱 Usando notas locales...');
+            notificationService.warning('Usando notas locales');
             return this.getLocalNotes();
         }
     }
@@ -205,6 +206,8 @@ export class ApiStorage {
 
     async initialize() {
         console.log('✅ ApiStorage inicializado');
+        // Probar conexión
+        await this.checkConnection();
         return true;
     }
 
@@ -213,9 +216,11 @@ export class ApiStorage {
             console.log('🔌 Verificando conexión con el servidor...');
             const result = await this.makeRequest('/health');
             console.log('✅ Servidor conectado:', result.status);
+            notificationService.success('Conectado al servidor');
             return true;
         } catch (error) {
             console.warn('⚠️ Sin conexión con el servidor:', error.message);
+            notificationService.warning('Sin conexión al servidor');
             return false;
         }
     }
