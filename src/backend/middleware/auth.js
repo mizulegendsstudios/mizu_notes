@@ -1,9 +1,14 @@
-﻿// src/backend/middleware/auth.js
-import { verifyToken } from '../lib/supabase.js';
-import { UserModel } from '../database/models/User.js';
+﻿// src/backend/middleware/auth.js - VERSIÓN CORREGIDA
+const { verifyToken } = require('../lib/supabase.js');
+const { UserModel } = require('../database/models/User.js');
 
-export async function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
     try {
+        // ⚡️ PERMITIR OPTIONS SIN AUTENTICACIÓN
+        if (req.method === 'OPTIONS') {
+            return next();
+        }
+
         // En desarrollo, permitir acceso sin token
         if (process.env.NODE_ENV === 'development' && !req.headers.authorization) {
             req.user = {
@@ -75,39 +80,4 @@ export async function authMiddleware(req, res, next) {
     }
 }
 
-// Middleware opcional (no bloquea si no hay token)
-export async function optionalAuthMiddleware(req, res, next) {
-    try {
-        const authHeader = req.headers.authorization;
-        
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.substring(7);
-            const user = await verifyToken(token);
-            
-            if (user) {
-                let dbUser = await UserModel.findBySupabaseUid(user.id);
-                if (!dbUser) {
-                    dbUser = await UserModel.create(
-                        user.id, 
-                        user.email,
-                        user.user_metadata?.username
-                    );
-                }
-                req.user = {
-                    id: dbUser.id,
-                    supabase_uid: user.id,
-                    email: user.email,
-                    username: dbUser.username
-                };
-            }
-        }
-        
-        next();
-    } catch (error) {
-        // En middleware opcional, continuamos incluso con errores
-        next();
-    }
-}
-
-
-
+module.exports = { authMiddleware };

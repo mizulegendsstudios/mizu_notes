@@ -1,17 +1,19 @@
 ﻿// src/backend/api/routes/notes.js - VERSIÓN CORREGIDA
-
 const express = require('express');
 const router = express.Router();
 
-// Importar el controlador y el middleware (usando CommonJS)
 const notesController = require('../controllers/notes.controller');
 const authMiddleware = require('../../middleware/auth');
 
-// ⚡️ LA SOLUCIÓN CLAVE:
-// Aplicar el middleware de autenticación SÓLO a las rutas que lo necesitan.
-// La petición OPTIONS (preflight de CORS) no llegará a estas rutas,
-// por lo que no será bloqueada por el middleware de autenticación.
+// ⚡️ SOLUCIÓN: Manejar OPTIONS explícitamente antes del middleware de auth
+router.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.status(204).send();
+});
 
+// Rutas protegidas
 router.get('/', authMiddleware, notesController.getNotes);
 router.post('/', authMiddleware, notesController.createNote);
 router.put('/:id', authMiddleware, notesController.updateNote);
