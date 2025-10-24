@@ -4,57 +4,88 @@ const cors = require('cors');
 const app = express();
 
 // 🔧 CORS COMPLETO - TEMPORAL PARA DESARROLLO
-// ⚠️ NOTA: En producción deberíamos restringir los orígenes permitidos
-// ⚠️ RAZÓN: Actualmente permite cualquier origen (*) para debugging
 app.use(cors({
-    origin: '*', // TEMPORAL - Cambiar a dominio específico en producción
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 app.use(express.json());
 
-// 🔧 IMPORTANTE: AGREGAR RUTAS DE LA API
-// ⚠️ PROBLEMA ANTERIOR: Habíamos quitado estas rutas por conflictos de CORS
-// ✅ SOLUCIÓN ACTUAL: Las rutas están en archivos separados y CORS está configurado
-// ⚠️ NOTA: Si falla, puede ser porque los archivos de rutas no existen o tienen errores
-app.use('/api/auth', require('./api/routes/auth'));
-app.use('/api/notes', require('./api/routes/notes'));
+// 🔧 MIDDLEWARE DE LOGGING PARA DEBUG
+app.use((req, res, next) => {
+    console.log(`🔧 ${req.method} ${req.path} - Headers:`, req.headers);
+    next();
+});
+
+// 🔧 IMPORTANTE: AGREGAR RUTAS CON MANEJO DE ERRORES
+// ⚠️ PROBLEMA: Las rutas están causando un crash
+// ✅ SOLUCIÓN: Agregar try/catch para ver el error específico
+try {
+    console.log('🔧 INTENTANDO CARGAR RUTA: /api/auth');
+    app.use('/api/auth', require('./api/routes/auth'));
+    console.log('✅ RUTA /api/auth CARGADA CORRECTAMENTE');
+} catch (error) {
+    console.error('❌ ERROR CARGANDO RUTA /api/auth:', error.message);
+    console.error('❌ STACK TRACE:', error.stack);
+}
+
+try {
+    console.log('🔧 INTENTANDO CARGAR RUTA: /api/notes');
+    app.use('/api/notes', require('./api/routes/notes'));
+    console.log('✅ RUTA /api/notes CARGADA CORRECTAMENTE');
+} catch (error) {
+    console.error('❌ ERROR CARGANDO RUTA /api/notes:', error.message);
+    console.error('❌ STACK TRACE:', error.stack);
+}
 
 // 🔧 ENDPOINTS DE DEBUG - MANTENER PARA VERIFICACIÓN
-// ✅ PROPÓSITO: Verificar que el servidor está ejecutando la versión correcta
 app.get('/api/debug', (req, res) => {
-    console.log('🔧 DEBUG ENDPOINT - Headers:', req.headers);
     res.json({
         success: true,
-        message: 'DEBUG - Server is running correct version',
-        timestamp: new Date().toISOString(),
-        origin: req.headers.origin,
-        userAgent: req.headers['user-agent'],
-        cors: 'enabled'
+        message: 'DEBUG - Server routes loaded with error handling',
+        timestamp: new Date().toISOString()
     });
 });
 
-// ✅ HEALTH CHECK - Para monitoreo y verificación básica
 app.get('/api/health', (req, res) => {
-    console.log('🔧 HEALTH CHECK - Origin:', req.headers.origin);
     res.json({ 
         status: 'OK', 
-        message: 'Mizu Notes API - CORRECT VERSION',
-        timestamp: new Date().toISOString(),
-        version: '2.0.0 - CORS FIXED'
+        message: 'Mizu Notes API - ERROR HANDLING VERSION',
+        timestamp: new Date().toISOString()
     });
 });
 
-// 🔧 MANEJO DE RUTAS NO ENCONTRADAS
-// ✅ PROPÓSITO: Proporcionar mejor feedback cuando una ruta no existe
+// 🔧 RUTA DE TEST SIMPLE PARA VERIFICAR QUE EL SERVIDOR FUNCIONA
+app.get('/api/test', (req, res) => {
+    res.json({
+        success: true,
+        message: 'TEST ROUTE - Server is running',
+        routes: {
+            auth: '/api/auth/*',
+            notes: '/api/notes/*', 
+            health: '/api/health',
+            debug: '/api/debug'
+        }
+    });
+});
+
+// 🔧 MANEJO DE ERRORES GLOBAL
 app.use('*', (req, res) => {
     res.status(404).json({ 
         error: 'Route not found',
         path: req.originalUrl,
-        method: req.method,
-        message: 'Verifica que la ruta esté correctamente configurada'
+        method: req.method
     });
+});
+
+// 🔧 MANEJO DE ERRORES NO CAPTURADOS
+process.on('uncaughtException', (error) => {
+    console.error('❌ UNCAUGHT EXCEPTION:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ UNHANDLED REJECTION at:', promise, 'reason:', reason);
 });
 
 module.exports = app;
