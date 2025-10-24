@@ -1,4 +1,4 @@
-// ui/Editor.js
+// src/frontend/features/notes/Editor.js - VERSIÓN CORREGIDA
 export class Editor {
     constructor(notesManager) {
         this.notesManager = notesManager;
@@ -8,6 +8,7 @@ export class Editor {
         
         this.initializeElements();
         this.setupEventListeners();
+        this.update(); // Actualizar inmediatamente
     }
 
     initializeElements() {
@@ -26,14 +27,29 @@ export class Editor {
         this.elements.noteTitle.addEventListener('input', () => this.handleNoteChange());
         this.elements.noteContent.addEventListener('input', () => this.handleNoteChange());
 
-        // Suscribirse a cambios del administrador de notas
-        this.notesManager.subscribe('currentNoteChanged', (noteId) => {
+        // EVENTOS CORREGIDOS - usar los que NotesManager realmente emite
+        this.notesManager.subscribe('noteSelected', (note) => {
+            console.log('Editor: Nota seleccionada recibida', note?.id);
             this.update();
         });
 
-        this.notesManager.subscribe('notesLoaded', () => {
-            // Asegurar que el editor se actualice después de cargar las notas
-            setTimeout(() => this.update(), 100);
+        this.notesManager.subscribe('notesUpdated', () => {
+            console.log('Editor: Notas actualizadas recibidas');
+            this.update();
+        });
+
+        this.notesManager.subscribe('noteUpdated', (note) => {
+            // Si la nota actualizada es la que estamos viendo, actualizar
+            const currentNote = this.notesManager.getCurrentNote();
+            if (currentNote && currentNote.id === note.id) {
+                console.log('Editor: Nota actualizada recibida', note.id);
+                this.showNote(note);
+            }
+        });
+
+        this.notesManager.subscribe('notesCleared', () => {
+            console.log('Editor: Notas limpiadas recibidas');
+            this.showEmptyState();
         });
     }
 
@@ -48,7 +64,11 @@ export class Editor {
         const title = this.elements.noteTitle.value;
         const content = this.elements.noteContent.value;
         
-        this.notesManager.updateNote(currentNote.id, title, content);
+        // LLAMADA CORREGIDA - pasar objeto con updates
+        this.notesManager.updateNote(currentNote.id, {
+            title: title,
+            content: content
+        });
         
         // Programar guardado automático
         this.scheduleAutoSave();
@@ -96,25 +116,33 @@ export class Editor {
     }
 
     showNote(note) {
-        // Solo actualizar si los valores son diferentes para evitar parpadeo
-        if (this.elements.noteTitle.value !== note.title) {
-            this.elements.noteTitle.value = note.title;
-        }
-        if (this.elements.noteContent.value !== note.content) {
-            this.elements.noteContent.value = note.content;
+        if (!note) return;
+        
+        // Solo actualizar si no estamos editando actualmente
+        if (!this.isEditing) {
+            if (this.elements.noteTitle.value !== note.title) {
+                this.elements.noteTitle.value = note.title || '';
+            }
+            if (this.elements.noteContent.value !== note.content) {
+                this.elements.noteContent.value = note.content || '';
+            }
         }
         
         this.elements.noteTitle.placeholder = 'Título de la nota...';
         this.elements.noteContent.placeholder = 'Escribe tu nota aquí...';
         this.elements.noteTitle.disabled = false;
         this.elements.noteContent.disabled = false;
+        
         this.updateStats();
+        this.updateLastSaved(note.updatedAt);
         
         console.log(`Editor: Mostrando nota "${note.title}"`);
     }
 
     updateStats() {
-        const currentContent = this.elements.noteContent.value;
+        if (!this.elements.charCount || !this.elements.wordCount) return;
+        
+        const currentContent = this.elements.noteContent.value || '';
         const charCount = currentContent.length;
         const wordCount = currentContent.trim() ? currentContent.trim().split(/\s+/).length : 0;
         
@@ -122,12 +150,23 @@ export class Editor {
         this.elements.wordCount.textContent = `${wordCount} palabras`;
     }
 
+    updateLastSaved(timestamp) {
+        if (this.elements.lastSaved && timestamp) {
+            const date = new Date(timestamp);
+            this.elements.lastSaved.textContent = `Última edición: ${date.toLocaleTimeString()}`;
+        }
+    }
+
     showAutoSaveIndicator() {
+        if (!this.elements.autoSaveIndicator || !this.elements.lastSaved) return;
+        
         this.elements.autoSaveIndicator.classList.add('visible');
         this.elements.lastSaved.textContent = `Última edición: ${new Date().toLocaleTimeString()}`;
         
         setTimeout(() => {
-            this.elements.autoSaveIndicator.classList.remove('visible');
+            if (this.elements.autoSaveIndicator) {
+                this.elements.autoSaveIndicator.classList.remove('visible');
+            }
         }, 2000);
     }
 
@@ -157,5 +196,10 @@ export class Editor {
     // Método para forzar actualización
     refresh() {
         this.update();
+    }
+
+    // Método para limpiar
+    destroy() {
+        this.elements = {};
     }
 }
