@@ -3,7 +3,7 @@ import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
-    constructor(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
+    constructor(baseURL = 'https://mizu-notes-git-gh-pages-mizulegendsstudios-admins-projects.vercel.app/api') {
         this.baseURL = baseURL;
         this.token = null;
         this.currentUserId = null;
