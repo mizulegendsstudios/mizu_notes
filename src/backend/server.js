@@ -1,61 +1,76 @@
-﻿// src/backend/server.js - VERSIÓN SIMPLIFICADA SIN MIDDLEWARE PROBLEMÁTICO
+﻿// src/backend/server.js - VERSIÓN COMMONJS PARA VERCEL
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// 🔧 CORS PERMITIENDO TODOS LOS ORÍGENES TEMPORALMENTE
+// CORS para todos los orígenes
 app.use(cors({
-    origin: true, // ⚡️ PERMITIR TODOS los orígenes
+    origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
-// Middleware para parsing JSON
+// Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware de logging
+// Logging
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
 
-// 🔧 HEALTH CHECK PÚBLICO - SIN AUTENTICACIÓN
+// HEALTH CHECK - RUTA PRINCIPAL
 app.get('/api/health', (req, res) => {
+    console.log('✅ Health check recibido desde:', req.headers.origin);
     res.json({ 
         status: 'OK', 
         message: 'Mizu Notes API is running',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
-        cors: 'enabled',
-        yourOrigin: req.headers.origin
+        cors: 'enabled'
     });
 });
 
-// Ruta de prueba CORS pública
-app.get('/api/test-cors', (req, res) => {
+// Health check legacy
+app.get('/health', (req, res) => {
     res.json({ 
-        success: true,
-        message: '✅ CORS test successful!',
-        origin: req.headers.origin,
-        method: req.method,
+        status: 'OK', 
+        message: 'Mizu Notes API (legacy endpoint)',
         timestamp: new Date().toISOString()
     });
 });
 
-// 🔧 RUTAS PÚBLICAS DE PRUEBA - SIN AUTENTICACIÓN
-app.get('/api/public/notes', (req, res) => {
-    // Datos de ejemplo para probar
+// TEST CORS
+app.get('/api/test-cors', (req, res) => {
+    res.json({ 
+        success: true,
+        message: '✅ CORS funcionando correctamente!',
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// RUTAS DE NOTAS PÚBLICAS
+app.get('/api/notes', (req, res) => {
+    console.log('📝 GET /api/notes recibido');
     res.json({
         success: true,
         data: [
             {
-                id: 'test-note-1',
-                title: 'Nota de prueba',
-                content: 'Esta es una nota de prueba del servidor',
+                id: 'note-1',
+                title: 'Bienvenido a Mizu Notes',
+                content: 'Esta es tu primera nota del servidor. ¡Funciona! 🎉',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                version: 1
+            },
+            {
+                id: 'note-2', 
+                title: 'Características',
+                content: '• Sincronización en tiempo real\n• Almacenamiento offline\n• Interfaz moderna',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 version: 1
@@ -64,46 +79,39 @@ app.get('/api/public/notes', (req, res) => {
     });
 });
 
-app.post('/api/public/notes', (req, res) => {
+app.post('/api/notes', (req, res) => {
     const { title, content } = req.body;
+    console.log('📝 POST /api/notes:', title);
+    
+    const newNote = {
+        id: 'note-' + Date.now(),
+        title: title || 'Nueva nota',
+        content: content || 'Contenido de la nota',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        version: 1
+    };
+    
     res.json({
         success: true,
-        data: {
-            id: 'new-note-' + Date.now(),
-            title: title || 'Nueva nota',
-            content: content || 'Contenido de prueba',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            version: 1
-        }
+        data: newNote,
+        message: 'Nota creada correctamente'
     });
 });
-
-// Importar rutas (mantener compatibilidad)
-const authRoutes = require('./api/routes/auth');
-const notesRoutes = require('./api/routes/notes');
-const indexRoutes = require('./api/routes/index');
-
-// Usar rutas normales
-app.use('/api', indexRoutes);
 
 // Ruta raíz
 app.get('/', (req, res) => {
     res.json({
-        message: 'Mizu Notes API Server',
+        message: '🚀 Mizu Notes API Server',
         version: '1.0.0',
         status: 'running',
-        endpoints: {
-            public: [
-                '/api/health',
-                '/api/test-cors', 
-                '/api/public/notes'
-            ],
-            protected: [
-                '/api/auth/*',
-                '/api/notes/*'
-            ]
-        }
+        timestamp: new Date().toISOString(),
+        endpoints: [
+            'GET /api/health',
+            'GET /api/test-cors', 
+            'GET /api/notes',
+            'POST /api/notes'
+        ]
     });
 });
 
@@ -112,8 +120,24 @@ app.use('*', (req, res) => {
     res.status(404).json({ 
         error: 'Route not found',
         path: req.originalUrl,
-        method: req.method
+        availableRoutes: [
+            '/api/health',
+            '/health',
+            '/api/test-cors',
+            '/api/notes',
+            '/'
+        ]
     });
 });
 
+// Manejo de errores
+app.use((error, req, res, next) => {
+    console.error('❌ Error:', error);
+    res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: 'Something went wrong'
+    });
+});
+
+// Export para Vercel
 module.exports = app;

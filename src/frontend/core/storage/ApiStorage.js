@@ -1,4 +1,4 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN CON RUTAS PÚBLICAS
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN MEJORADA
 import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
@@ -7,21 +7,11 @@ export class ApiStorage {
         this.baseURL = baseURL;
         this.token = null;
         this.currentUserId = null;
-        this.isOnline = false;
-        this.supabase = null;
-    }
-
-    setAuthToken(token) {
-        this.token = token;
-        console.log('🔐 ApiStorage: Token configurado');
-        if (token) {
-            localStorage.setItem('mizu_auth_token', token);
-        }
     }
 
     async makeRequest(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        console.log('🌐 Haciendo request a:', url);
+        console.log('🌐 ApiStorage: Haciendo request a', url);
         
         try {
             const headers = {
@@ -37,38 +27,43 @@ export class ApiStorage {
                 credentials: 'omit'
             };
 
-            if (options.body) {
-                fetchOptions.body = typeof options.body === 'object' 
-                    ? JSON.stringify(options.body) 
-                    : options.body;
+            if (options.body && typeof options.body === 'object') {
+                fetchOptions.body = JSON.stringify(options.body);
             }
+
+            console.log('🔧 Fetch config:', {
+                method: fetchOptions.method,
+                endpoint: endpoint,
+                hasAuth: !!this.token
+            });
 
             const response = await fetch(url, fetchOptions);
-            console.log('📡 Response status:', response.status);
+            console.log('📡 Response status:', response.status, response.statusText);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('✅ Request exitoso:', data);
+            return data;
+
         } catch (error) {
             console.error('❌ Error en request:', error);
-            throw new Error('No se puede conectar con el servidor');
+            throw error;
         }
     }
 
     async getNotes() {
         try {
-            console.log('🔍 Obteniendo notas...');
+            console.log('🔍 ApiStorage.getNotes - Iniciando...');
             
-            // 🔧 PRIMERO INTENTAR RUTA PÚBLICA
-            try {
-                const publicResult = await this.makeRequest('/public/notes');
-                console.log('✅ Notas públicas obtenidas:', publicResult);
-                
-                const notesMap = new Map();
-                if (publicResult.data && Array.isArray(publicResult.data)) {
-                    publicResult.data.forEach(noteData => {
+            const result = await this.makeRequest('/notes');
+            
+            const notesMap = new Map();
+            if (result.data && Array.isArray(result.data)) {
+                result.data.forEach(noteData => {
+                    try {
                         const note = new Note(
                             noteData.id,
                             noteData.title,
@@ -78,50 +73,30 @@ export class ApiStorage {
                             noteData.version || 1
                         );
                         notesMap.set(note.id, note);
-                    });
-                }
-                
-                this.saveNotesToLocalStorage(notesMap);
-                return notesMap;
-            } catch (publicError) {
-                console.log('⚠️ No se pudieron obtener notas públicas, intentando ruta protegida...');
-                
-                // Si falla la ruta pública, intentar la protegida
-                if (this.token) {
-                    const protectedResult = await this.makeRequest('/notes');
-                    const notesMap = new Map();
-                    
-                    if (protectedResult.data && Array.isArray(protectedResult.data)) {
-                        protectedResult.data.forEach(noteData => {
-                            const note = new Note(
-                                noteData.id,
-                                noteData.title,
-                                noteData.content,
-                                new Date(noteData.created_at || noteData.createdAt),
-                                new Date(noteData.updated_at || noteData.updatedAt),
-                                noteData.version || 1
-                            );
-                            notesMap.set(note.id, note);
-                        });
+                        console.log('📄 Nota cargada:', note.title);
+                    } catch (error) {
+                        console.error('❌ Error parseando nota:', error);
                     }
-                    
-                    this.saveNotesToLocalStorage(notesMap);
-                    return notesMap;
-                } else {
-                    throw publicError;
-                }
+                });
             }
+            
+            console.log('✅ Notas cargadas del servidor:', notesMap.size);
+            this.saveNotesToLocalStorage(notesMap);
+            return notesMap;
+            
         } catch (error) {
-            console.error('❌ Error obteniendo notas:', error);
+            console.error('❌ Error obteniendo notas del servidor:', error);
+            console.log('📱 Usando notas locales...');
             return this.getLocalNotes();
         }
     }
 
     getLocalNotes() {
         try {
-            const notesData = localStorage.getItem('mizu_notes');
-            const notesMap = new Map();
+            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
+            const notesData = localStorage.getItem(userNotesKey);
             
+            const notesMap = new Map();
             if (notesData) {
                 const parsed = JSON.parse(notesData);
                 if (Array.isArray(parsed)) {
@@ -138,6 +113,7 @@ export class ApiStorage {
                     });
                 }
             }
+            console.log('📁 Notas locales cargadas:', notesMap.size);
             return notesMap;
         } catch (error) {
             console.error('❌ Error obteniendo notas locales:', error);
@@ -156,18 +132,21 @@ export class ApiStorage {
                 version: note.version
             }));
             
-            localStorage.setItem('mizu_notes', JSON.stringify(notesArray));
+            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
+            localStorage.setItem(userNotesKey, JSON.stringify(notesArray));
+            console.log('💾 Notas guardadas en localStorage:', notesArray.length);
+            
         } catch (error) {
-            console.error('❌ Error guardando notas locales:', error);
+            console.error('❌ Error guardando en localStorage:', error);
         }
     }
 
     async saveNotes(notesMap) {
         try {
-            console.log('💾 Guardando notas...');
+            console.log('💾 ApiStorage.saveNotes - Guardando', notesMap.size, 'notas...');
             
-            // Intentar guardar en servidor
             const notes = Array.from(notesMap.values());
+            const results = [];
             
             for (const note of notes) {
                 try {
@@ -177,12 +156,17 @@ export class ApiStorage {
                         version: note.version
                     };
                     
-                    if (note.id && !note.id.startsWith('local_')) {
-                        await this.makeRequest(`/notes/${note.id}`, {
+                    if (note.id && note.id.startsWith('note-')) {
+                        // Actualizar nota existente
+                        console.log('📝 Actualizando nota:', note.id);
+                        const result = await this.makeRequest(`/notes/${note.id}`, {
                             method: 'PUT',
                             body: noteData
                         });
+                        results.push(result);
                     } else {
+                        // Crear nueva nota
+                        console.log('🆕 Creando nota:', note.title);
                         const result = await this.makeRequest('/notes', {
                             method: 'POST',
                             body: noteData
@@ -190,21 +174,32 @@ export class ApiStorage {
                         
                         if (result.data && result.data.id) {
                             note.id = result.data.id;
+                            results.push(result);
                         }
                     }
                 } catch (error) {
-                    console.error('❌ Error guardando nota en servidor:', error);
+                    console.error(`❌ Error con nota "${note.title}":`, error);
                 }
             }
             
+            console.log('✅ Sincronización completada:', results.length, 'notas procesadas');
+            
             // Siempre guardar localmente
             this.saveNotesToLocalStorage(notesMap);
-            notificationService.success('Notas guardadas');
+            
+            if (results.length > 0) {
+                notificationService.success('Notas sincronizadas con el servidor');
+            } else {
+                notificationService.info('Notas guardadas localmente');
+            }
+            
+            return results;
             
         } catch (error) {
-            console.error('❌ Error guardando notas:', error);
+            console.error('❌ Error en saveNotes:', error);
             this.saveNotesToLocalStorage(notesMap);
-            notificationService.info('Notas guardadas localmente');
+            notificationService.warning('Notas guardadas localmente');
+            throw error;
         }
     }
 
@@ -213,21 +208,26 @@ export class ApiStorage {
         return true;
     }
 
-    setSupabaseClient(supabase) {
-        this.supabase = supabase;
-    }
-
     async checkConnection() {
         try {
-            await this.makeRequest('/health');
-            this.isOnline = true;
-            console.log('✅ Servidor conectado');
+            console.log('🔌 Verificando conexión con el servidor...');
+            const result = await this.makeRequest('/health');
+            console.log('✅ Servidor conectado:', result.status);
             return true;
         } catch (error) {
-            this.isOnline = false;
-            console.log('⚠️ Servidor desconectado');
+            console.warn('⚠️ Sin conexión con el servidor:', error.message);
             return false;
         }
+    }
+
+    setSupabaseClient(supabase) {
+        this.supabase = supabase;
+        console.log('✅ Supabase client configurado en ApiStorage');
+    }
+
+    setAuthToken(token) {
+        this.token = token;
+        console.log('🔐 Token configurado en ApiStorage');
     }
 }
 
