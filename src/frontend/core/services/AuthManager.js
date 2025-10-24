@@ -1,4 +1,4 @@
-// src/frontend/core/services/AuthManager.js - VERSIÓN CORREGIDA
+// src/frontend/core/services/AuthManager.js - VERSIÓN COMPLETA CORREGIDA
 import { SupabaseAuth } from '../auth/SupabaseClient.js';
 import { notificationService } from './NotificationService.js';
 
@@ -66,8 +66,15 @@ export class AuthManager {
             this.storage.setAuthToken(session.access_token);
         }
         
+        // ✅ CONFIGURAR Supabase client en el storage
+        if (this.storage.setSupabaseClient) {
+            this.storage.setSupabaseClient(this.auth.supabase);
+        }
+        
         // ✅ ESPERAR a que el storage se inicialice
-        await this.storage.initialize();
+        if (this.storage.initialize) {
+            await this.storage.initialize();
+        }
         
         // ✅ LUEGO sincronizar (NO limpiar primero)
         await this.syncNotesAfterLogin();
