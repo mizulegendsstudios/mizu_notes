@@ -1,4 +1,4 @@
-// src/frontend/core/services/AuthManager.js
+// src/frontend/core/services/AuthManager.js - VERSIÓN CORREGIDA
 import { SupabaseAuth } from '../auth/SupabaseClient.js';
 import { notificationService } from './NotificationService.js';
 
@@ -24,18 +24,18 @@ export class AuthManager {
     async checkExistingSession() {
         const sessionResult = await this.auth.initializeSession();
         if (sessionResult.success && sessionResult.user) {
-            this.handleLoginSuccess(sessionResult.user, sessionResult.session);
+            await this.handleLoginSuccess(sessionResult.user, sessionResult.session);
         }
     }
 
     setupAuthListeners() {
         // Escuchar cambios de estado de autenticación de Supabase
-        this.auth.supabase.auth.onAuthStateChange((event, session) => {
+        this.auth.supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('🔐 Estado de autenticación cambiado:', event);
             
             switch (event) {
                 case 'SIGNED_IN':
-                    this.handleLoginSuccess(session.user, session);
+                    await this.handleLoginSuccess(session.user, session);
                     break;
                     
                 case 'SIGNED_OUT':
@@ -61,18 +61,21 @@ export class AuthManager {
         
         console.log('✅ Usuario autenticado:', user.email);
         
-        // Configurar el storage con el token
+        // ✅ PRIMERO configurar el storage con el token
         if (this.storage.setAuthToken) {
             this.storage.setAuthToken(session.access_token);
         }
         
-        // Disparar evento global
+        // ✅ ESPERAR a que el storage se inicialice
+        await this.storage.initialize();
+        
+        // ✅ LUEGO sincronizar (NO limpiar primero)
+        await this.syncNotesAfterLogin();
+        
+        // ✅ FINALMENTE disparar eventos
         window.dispatchEvent(new CustomEvent('mizu:userLoggedIn', {
             detail: { user }
         }));
-        
-        // Sincronizar notas del servidor
-        await this.syncNotesAfterLogin();
         
         notificationService.success(`¡Bienvenido ${user.email}!`);
     }
@@ -137,59 +140,77 @@ export class AuthManager {
         try {
             notificationService.info('Sincronizando notas...');
             
-            // 1. Obtener notas del servidor
+            // 1. Obtener notas del servidor PRIMERO
             const serverNotes = await this.storage.getNotes();
+            console.log('📥 Notas del servidor:', serverNotes.size);
             
-            // 2. Obtener notas locales actuales
+            // 2. Obtener notas locales ACTUALES (sin limpiar)
             const currentNotes = this.notesManager.getNotes();
+            console.log('📱 Notas locales:', currentNotes.size);
             
-            // 3. Si hay notas locales, hacer fusión inteligente
-            if (currentNotes.size > 0) {
-                await this.mergeNotes(serverNotes, currentNotes);
-            } else {
-                // Usar directamente las notas del servidor
+            // 3. Si NO hay notas locales, usar las del servidor directamente
+            if (currentNotes.size === 0) {
+                console.log('🔄 Cargando notas del servidor...');
                 this.notesManager.clearNotes();
                 serverNotes.forEach(note => {
                     this.notesManager.notes.set(note.id, note);
                 });
+            } else {
+                // 4. Si HAY notas locales, hacer fusión INTELIGENTE
+                console.log('🔄 Fusionando notas locales con servidor...');
+                await this.mergeNotes(serverNotes, currentNotes);
             }
             
-            // 4. Actualizar UI
+            // 5. Guardar el estado fusionado
+            await this.notesManager.save();
+            
+            // 6. Actualizar UI
             this.notesManager.notifyUpdate();
             
-            // 5. Establecer nota actual
+            // 7. Establecer nota actual
             if (this.notesManager.getNotes().size > 0) {
                 const lastEdited = Array.from(this.notesManager.getNotes().values())
                     .sort((a, b) => b.updatedAt - a.updatedAt)[0];
                 this.notesManager.setCurrentNote(lastEdited.id);
             }
             
+            console.log('✅ Sincronización completada:', this.notesManager.getNotes().size, 'notas');
             notificationService.success('Sincronización completada');
             
         } catch (error) {
-            console.error('Error en sincronización post-login:', error);
-            notificationService.warning('Usando notas locales');
+            console.error('❌ Error en sincronización post-login:', error);
+            notificationService.warning('Usando notas locales - Error: ' + error.message);
         }
     }
 
     async mergeNotes(serverNotes, localNotes) {
         const merged = new Map();
         
+        console.log('🔄 Iniciando fusión...');
+        console.log('📡 Notas del servidor:', serverNotes.size);
+        console.log('💾 Notas locales:', localNotes.size);
+        
         // Primero agregar todas las notas del servidor
         serverNotes.forEach((note, id) => {
             merged.set(id, note);
         });
         
+        console.log('✅ Notas del servidor agregadas:', merged.size);
+        
         // Luego agregar notas locales que no existen en el servidor
         localNotes.forEach((localNote, localId) => {
             if (!merged.has(localId)) {
                 // Nota local nueva - agregar al servidor
+                console.log('➕ Agregando nota local nueva:', localId, localNote.title);
                 merged.set(localId, localNote);
             } else {
                 // Conflicto: usar la versión más reciente
                 const serverNote = merged.get(localId);
                 if (localNote.updatedAt > serverNote.updatedAt) {
+                    console.log('🔄 Reemplazando nota del servidor con versión local más reciente:', localId);
                     merged.set(localId, localNote);
+                } else {
+                    console.log('📡 Manteniendo versión del servidor (más reciente):', localId);
                 }
             }
         });
@@ -201,6 +222,7 @@ export class AuthManager {
         });
         
         console.log(`✅ Fusión completada: ${merged.size} notas`);
+        return merged;
     }
 
     // Métodos públicos para la UI
