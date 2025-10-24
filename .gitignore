@@ -1,0 +1,26 @@
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# Temporales y logs
+*.log
+*.tmp
+*.bak
+*.old
+*.swp
+*.swo
+
+# Cachés
+.cache/
+
+# Configuración local opcional
+config.local.js
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+.vercel
