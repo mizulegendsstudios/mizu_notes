@@ -1,15 +1,21 @@
-﻿// src/backend/server.js - VERSIÓN COMMONJS PARA VERCEL
+﻿// src/backend/server.js - VERSIÓN SIN AUTENTICACIÓN
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 
 const app = express();
 
-// CORS para todos los orígenes
+// 🔧 CORS COMPLETO
 app.use(cors({
-    origin: true,
+    origin: [
+        'https://mizulegendsstudios.github.io',
+        'https://mizulegendsstudios.github.io/mizu_notes',
+        'http://localhost:3000',
+        'http://127.0.0.1:5500',
+        'http://localhost:5500'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware
@@ -18,13 +24,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Logging
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
     next();
 });
 
-// HEALTH CHECK - RUTA PRINCIPAL
+// 🔧 HEALTH CHECK - SIN AUTENTICACIÓN
 app.get('/api/health', (req, res) => {
-    console.log('✅ Health check recibido desde:', req.headers.origin);
+    console.log('✅ Health check desde:', req.headers.origin);
     res.json({ 
         status: 'OK', 
         message: 'Mizu Notes API is running',
@@ -34,16 +40,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Health check legacy
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        message: 'Mizu Notes API (legacy endpoint)',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// TEST CORS
+// TEST CORS - SIN AUTENTICACIÓN
 app.get('/api/test-cors', (req, res) => {
     res.json({ 
         success: true,
@@ -53,9 +50,9 @@ app.get('/api/test-cors', (req, res) => {
     });
 });
 
-// RUTAS DE NOTAS PÚBLICAS
+// 🔧 NOTAS - SIN AUTENTICACIÓN
 app.get('/api/notes', (req, res) => {
-    console.log('📝 GET /api/notes recibido');
+    console.log('📝 GET /api/notes desde:', req.headers.origin);
     res.json({
         success: true,
         data: [
@@ -68,7 +65,7 @@ app.get('/api/notes', (req, res) => {
                 version: 1
             },
             {
-                id: 'note-2', 
+                id: 'note-2',
                 title: 'Características',
                 content: '• Sincronización en tiempo real\n• Almacenamiento offline\n• Interfaz moderna',
                 created_at: new Date().toISOString(),
@@ -81,7 +78,7 @@ app.get('/api/notes', (req, res) => {
 
 app.post('/api/notes', (req, res) => {
     const { title, content } = req.body;
-    console.log('📝 POST /api/notes:', title);
+    console.log('📝 POST /api/notes:', title, 'desde:', req.headers.origin);
     
     const newNote = {
         id: 'note-' + Date.now(),
@@ -99,6 +96,23 @@ app.post('/api/notes', (req, res) => {
     });
 });
 
+app.put('/api/notes/:id', (req, res) => {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    console.log('📝 PUT /api/notes/', id, 'desde:', req.headers.origin);
+    
+    res.json({
+        success: true,
+        data: {
+            id: id,
+            title: title || 'Nota actualizada',
+            content: content || 'Contenido actualizado',
+            updated_at: new Date().toISOString()
+        },
+        message: 'Nota actualizada correctamente'
+    });
+});
+
 // Ruta raíz
 app.get('/', (req, res) => {
     res.json({
@@ -108,9 +122,10 @@ app.get('/', (req, res) => {
         timestamp: new Date().toISOString(),
         endpoints: [
             'GET /api/health',
-            'GET /api/test-cors', 
+            'GET /api/test-cors',
             'GET /api/notes',
-            'POST /api/notes'
+            'POST /api/notes',
+            'PUT /api/notes/:id'
         ]
     });
 });
@@ -122,7 +137,6 @@ app.use('*', (req, res) => {
         path: req.originalUrl,
         availableRoutes: [
             '/api/health',
-            '/health',
             '/api/test-cors',
             '/api/notes',
             '/'
@@ -130,14 +144,4 @@ app.use('*', (req, res) => {
     });
 });
 
-// Manejo de errores
-app.use((error, req, res, next) => {
-    console.error('❌ Error:', error);
-    res.status(500).json({ 
-        error: 'Internal Server Error',
-        message: 'Something went wrong'
-    });
-});
-
-// Export para Vercel
 module.exports = app;

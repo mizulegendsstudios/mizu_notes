@@ -1,10 +1,11 @@
-﻿// src/frontend/core/storage/ApiStorage.js - URL ACTUALIZADA
+﻿// src/frontend/core/storage/ApiStorage.js - SIN AUTENTICACIÓN TEMPORAL
 import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
     constructor(baseURL = 'https://mizu-notes-git-gh-pages-mizulegendsstudios-admins-projects.vercel.app/api') {
         this.baseURL = baseURL;
+        // 🔧 NO usar token temporalmente
         this.token = null;
         this.currentUserId = null;
     }
@@ -14,9 +15,9 @@ export class ApiStorage {
         console.log('🌐 ApiStorage: Haciendo request a', url);
         
         try {
+            // 🔧 NO incluir headers de autorización
             const headers = {
                 'Content-Type': 'application/json',
-                ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
                 ...options.headers
             };
 
@@ -33,7 +34,8 @@ export class ApiStorage {
 
             console.log('🔧 Fetch config:', {
                 method: fetchOptions.method,
-                endpoint: endpoint
+                endpoint: endpoint,
+                url: url
             });
 
             const response = await fetch(url, fetchOptions);
@@ -44,7 +46,7 @@ export class ApiStorage {
             }
 
             const data = await response.json();
-            console.log('✅ Request exitoso');
+            console.log('✅ Request exitoso:', data.success);
             return data;
 
         } catch (error) {
@@ -81,21 +83,20 @@ export class ApiStorage {
             
             console.log('✅ Notas cargadas del servidor:', notesMap.size);
             this.saveNotesToLocalStorage(notesMap);
-            notificationService.success('Notas cargadas del servidor');
+            notificationService.success(`Cargadas ${notesMap.size} notas del servidor`);
             return notesMap;
             
         } catch (error) {
             console.error('❌ Error obteniendo notas del servidor:', error);
             console.log('📱 Usando notas locales...');
-            notificationService.warning('Usando notas locales');
+            notificationService.warning('Usando notas locales (sin conexión)');
             return this.getLocalNotes();
         }
     }
 
     getLocalNotes() {
         try {
-            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
-            const notesData = localStorage.getItem(userNotesKey);
+            const notesData = localStorage.getItem('mizu_notes');
             
             const notesMap = new Map();
             if (notesData) {
@@ -133,8 +134,7 @@ export class ApiStorage {
                 version: note.version
             }));
             
-            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
-            localStorage.setItem(userNotesKey, JSON.stringify(notesArray));
+            localStorage.setItem('mizu_notes', JSON.stringify(notesArray));
             console.log('💾 Notas guardadas en localStorage:', notesArray.length);
             
         } catch (error) {
@@ -220,19 +220,18 @@ export class ApiStorage {
             return true;
         } catch (error) {
             console.warn('⚠️ Sin conexión con el servidor:', error.message);
-            notificationService.warning('Sin conexión al servidor');
+            notificationService.error('Sin conexión al servidor');
             return false;
         }
     }
 
+    // 🔧 MÉTODOS VACÍOS TEMPORALMENTE
     setSupabaseClient(supabase) {
-        this.supabase = supabase;
-        console.log('✅ Supabase client configurado en ApiStorage');
+        console.log('✅ Supabase client configurado (sin uso temporal)');
     }
 
     setAuthToken(token) {
-        this.token = token;
-        console.log('🔐 Token configurado en ApiStorage');
+        console.log('🔐 Token recibido (sin uso temporal):', token ? 'Sí' : 'No');
     }
 }
 
