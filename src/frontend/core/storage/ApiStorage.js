@@ -1,7 +1,7 @@
 ﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN COMPLETA CORREGIDA
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
-import { notificationService } from './NotificationService.js';
+import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
     constructor(baseURL = 'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app/api') {
