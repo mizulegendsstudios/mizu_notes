@@ -1,4 +1,4 @@
-﻿// src/backend/server.js - VERSIÓN CORREGIDA
+﻿// src/backend/server.js - VERSIÓN COMPLETA CORREGIDA
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -11,29 +11,30 @@ const indexRoutes = require('./api/routes/index');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔧 CONFIGURACIÓN CORS MEJORADA
+// 🔧 CORS COMPLETO - CONFIGURACIÓN MEJORADA
 const allowedOrigins = [
     'https://mizulegendsstudios.github.io',
     'https://mizulegendsstudios.github.io/mizu_notes',
     'http://localhost:3000',
     'http://127.0.0.1:5500',
     'http://localhost:5500',
-    'http://localhost:8080'
+    'http://localhost:8080',
+    'https://mizu-notes-o96sirmqd-mizulegendsstudios-admins-projects.vercel.app'
 ];
 
-// Middleware CORS COMPLETO
+// Middleware CORS principal
 app.use(cors({
     origin: function (origin, callback) {
-        // Permitir requests sin origin (como mobile apps o curl)
+        // Permitir requests sin origin
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) === -1) {
-            console.warn(`⚠️ CORS bloqueado para origen: ${origin}`);
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            console.log(`✅ CORS permitido para: ${origin}`);
+            return callback(null, true);
+        } else {
+            console.log(`❌ CORS bloqueado para: ${origin}`);
+            return callback(new Error('Not allowed by CORS'), false);
         }
-        console.log(`✅ CORS permitido para: ${origin}`);
-        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -46,46 +47,88 @@ app.use(cors({
         'Access-Control-Request-Method',
         'Access-Control-Request-Headers'
     ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 200
 }));
 
-// 🔧 MANEJAR PREFLIGHT OPTIONS EXPLÍCITAMENTE
-app.options('*', cors()); // Habilitar pre-flight para todas las rutas
+// 🔧 MANEJAR PREFLIGHT OPTIONS PARA TODAS LAS RUTAS
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).send();
+});
 
 // Middleware para parsing JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware de logging mejorado
+// Middleware de logging
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
     next();
 });
 
-// Rutas de la API
-app.use('/api', indexRoutes);
-
-// Ruta de health check MEJORADA
+// 🔧 HEALTH CHECK EN /api/health
 app.get('/api/health', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        cors: 'enabled'
-    });
-});
-
-// Ruta de health check en raíz también
-app.get('/health', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.json({ 
         status: 'OK', 
         message: 'Mizu Notes API is running',
         timestamp: new Date().toISOString(),
-        cors: 'enabled'
+        environment: process.env.NODE_ENV || 'development',
+        cors: 'enabled',
+        yourOrigin: req.headers.origin,
+        allowedOrigins: allowedOrigins
+    });
+});
+
+// Health check legacy en /health
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'Mizu Notes API is running (legacy endpoint)',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Ruta de prueba CORS pública
+app.get('/api/test-cors', (req, res) => {
+    res.json({ 
+        success: true,
+        message: '✅ CORS test successful!',
+        origin: req.headers.origin,
+        method: req.method,
+        timestamp: new Date().toISOString(),
+        cors: 'working'
+    });
+});
+
+// Ruta de información pública
+app.get('/api/info', (req, res) => {
+    res.json({
+        name: 'Mizu Notes API',
+        version: '1.0.0',
+        status: 'running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/api/health',
+            auth: '/api/auth/*',
+            notes: '/api/notes/*',
+            test: '/api/test-cors'
+        }
+    });
+});
+
+// Usar rutas de la API
+app.use('/api', indexRoutes);
+
+// Ruta raíz
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Mizu Notes API Server',
+        version: '1.0.0',
+        status: 'running',
+        documentation: 'Visit /api/info for more details'
     });
 });
 
@@ -93,21 +136,30 @@ app.get('/health', (req, res) => {
 app.use('*', (req, res) => {
     res.status(404).json({ 
         error: 'Route not found',
-        path: req.originalUrl
+        path: req.originalUrl,
+        method: req.method,
+        availableRoutes: [
+            '/api/health',
+            '/health',
+            '/api/info', 
+            '/api/test-cors',
+            '/api/auth/*',
+            '/api/notes/*'
+        ]
     });
 });
 
-// Manejo global de errores MEJORADO
+// Manejo global de errores
 app.use((error, req, res, next) => {
     console.error('Error global:', error);
     
-    // Si es error de CORS
+    // Error de CORS
     if (error.message.includes('CORS')) {
         return res.status(403).json({ 
             error: 'CORS Error',
             message: 'Origin not allowed',
-            allowedOrigins: allowedOrigins,
-            yourOrigin: req.headers.origin
+            yourOrigin: req.headers.origin,
+            allowedOrigins: allowedOrigins
         });
     }
     
@@ -115,14 +167,6 @@ app.use((error, req, res, next) => {
         error: 'Internal Server Error',
         message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
     });
-});
-
-// Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Mizu Notes API running on port ${PORT}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`✅ CORS enabled for:`, allowedOrigins);
-    console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;

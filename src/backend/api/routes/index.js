@@ -1,19 +1,35 @@
 ﻿// src/backend/api/routes/index.js - VERSIÓN CORREGIDA
-
 const express = require('express');
 const router = express.Router();
 
-// Importar las rutas específicas (usando CommonJS)
-const notesRoutes = require('./notes');
+// Importar rutas
 const authRoutes = require('./auth');
+const notesRoutes = require('./notes');
 
-// Montar las rutas bajo el prefijo /api
-// El prefijo /api ya se añade en server.js con app.use('/api', indexRoutes)
-// Así que aquí solo montamos /auth y /notes
+// 🔧 MANEJAR OPTIONS PARA /api
+router.options('/', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.status(200).send();
+});
+
+// Ruta de información de API
+router.get('/', (req, res) => {
+    res.json({
+        message: 'Mizu Notes API',
+        version: '1.0.0',
+        endpoints: {
+            auth: '/api/auth/*',
+            notes: '/api/notes/*',
+            health: '/api/health',
+            info: '/api/info'
+        }
+    });
+});
+
+// Usar rutas
 router.use('/auth', authRoutes);
 router.use('/notes', notesRoutes);
 
-console.log('✅ Rutas de API configuradas: /api/auth, /api/notes');
-
-// Exportar el router para que server.js pueda usarlo
 module.exports = router;

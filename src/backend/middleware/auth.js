@@ -4,13 +4,14 @@ const { UserModel } = require('../database/models/User.js');
 
 async function authMiddleware(req, res, next) {
     try {
-        // ⚡️ PERMITIR OPTIONS SIN AUTENTICACIÓN
+        // 🔧 PERMITIR OPTIONS SIN AUTENTICACIÓN
         if (req.method === 'OPTIONS') {
-            return next();
+            return res.status(200).send();
         }
 
         // En desarrollo, permitir acceso sin token
         if (process.env.NODE_ENV === 'development' && !req.headers.authorization) {
+            console.log('🔧 Modo desarrollo: Acceso sin autenticación');
             req.user = {
                 id: '11111111-1111-1111-1111-111111111111',
                 supabase_uid: 'dev-user-123',
@@ -39,6 +40,8 @@ async function authMiddleware(req, res, next) {
             });
         }
 
+        console.log('🔐 Verificando token...');
+
         // Verificar token con Supabase
         const user = await verifyToken(token);
         
@@ -48,6 +51,8 @@ async function authMiddleware(req, res, next) {
                 error: 'Token inválido o expirado'
             });
         }
+
+        console.log('✅ Token válido para usuario:', user.email);
 
         // Buscar o crear usuario en nuestra base de datos
         let dbUser = await UserModel.findBySupabaseUid(user.id);
@@ -71,7 +76,7 @@ async function authMiddleware(req, res, next) {
 
         next();
     } catch (error) {
-        console.error('Error en autenticación:', error);
+        console.error('❌ Error en autenticación:', error);
         res.status(500).json({
             success: false,
             error: 'Error de autenticación',
@@ -80,4 +85,4 @@ async function authMiddleware(req, res, next) {
     }
 }
 
-module.exports = { authMiddleware };
+module.exports = authMiddleware;

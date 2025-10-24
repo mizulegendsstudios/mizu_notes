@@ -1,7 +1,5 @@
 ﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN COMPLETA CORREGIDA
-
 import { Note } from '../../../shared/types/Note.js';
-import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
@@ -70,13 +68,6 @@ export class ApiStorage {
         const url = `${this.baseURL}${endpoint}`;
         console.log('🌐 ApiStorage: Haciendo request a', url, 'Método:', options.method || 'GET');
         
-        // Mostrar headers pero ocultar token completo por seguridad
-        const safeHeaders = { ...options.headers };
-        if (safeHeaders.Authorization) {
-            safeHeaders.Authorization = 'Bearer ***' + safeHeaders.Authorization.slice(-10);
-        }
-        console.log('📤 Headers:', safeHeaders);
-
         try {
             const headers = {
                 'Content-Type': 'application/json',
@@ -89,11 +80,11 @@ export class ApiStorage {
                 method: options.method || 'GET',
                 headers,
                 mode: 'cors',
-                credentials: 'omit', // ⚡️ CAMBIADO de 'include' a 'omit' para CORS
+                credentials: 'omit',
                 ...options
             };
 
-            // Si tiene body, convertirlo a JSON (si no es ya string)
+            // Si tiene body, convertirlo a JSON
             if (options.body && typeof options.body === 'object') {
                 fetchOptions.body = JSON.stringify(options.body);
             } else if (options.body) {
@@ -104,7 +95,8 @@ export class ApiStorage {
                 method: fetchOptions.method,
                 mode: fetchOptions.mode,
                 credentials: fetchOptions.credentials,
-                hasBody: !!fetchOptions.body
+                hasBody: !!fetchOptions.body,
+                hasAuth: !!this.token
             });
 
             const response = await fetch(url, fetchOptions);
@@ -141,7 +133,7 @@ export class ApiStorage {
             
             // Manejar errores de CORS específicamente
             if (error.message.includes('CORS') || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-                const corsError = new Error('No se puede conectar con el servidor. Verifica la configuración CORS y la conexión a internet.');
+                const corsError = new Error('No se puede conectar con el servidor. Verifica la configuración CORS.');
                 corsError.isCorsError = true;
                 corsError.originalError = error;
                 
@@ -151,15 +143,12 @@ export class ApiStorage {
                     await new Promise(resolve => setTimeout(resolve, 1000 * this.retryCount));
                     return this.makeRequest(endpoint, options);
                 } else {
-                    notificationService.error('Error de conexión con el servidor. Verifica tu conexión a internet.');
+                    notificationService.error('Error de conexión con el servidor.');
                     throw corsError;
                 }
             }
             
-            // Reiniciar contador de reintentos si no es error de CORS
             this.retryCount = 0;
-            
-            // Propagamos el error para que el llamador lo maneje
             throw error;
         }
     }
@@ -170,7 +159,6 @@ export class ApiStorage {
             
             if (this.token && this.currentUserId) {
                 console.log('🌐 Obteniendo notas del servidor...');
-                loadingService.show('Cargando notas del servidor...');
                 
                 const result = await this.makeRequest('/notes');
                 
@@ -195,7 +183,6 @@ export class ApiStorage {
                 
                 console.log('✅ Notas del servidor mapeadas:', notesMap.size);
                 this.saveNotesToLocalStorage(notesMap);
-                loadingService.hide();
                 return notesMap;
             } else {
                 console.log('📱 Usando notas locales (no autenticado)');
@@ -203,7 +190,6 @@ export class ApiStorage {
             }
         } catch (error) {
             console.error('❌ Error obteniendo notas del servidor:', error);
-            loadingService.hide();
             
             if (error.isCorsError) {
                 notificationService.warning('Usando notas locales (sin conexión al servidor)');
@@ -276,7 +262,6 @@ export class ApiStorage {
                 const results = [];
                 
                 console.log('🔄 Sincronizando', notes.length, 'notas con el servidor...');
-                loadingService.show('Sincronizando notas...');
                 
                 for (const note of notes) {
                     try {
@@ -303,21 +288,17 @@ export class ApiStorage {
                             });
                             
                             if (result.data && result.data.id) {
-                                // Actualizar el ID local con el ID del servidor
                                 note.id = result.data.id;
                                 results.push(result);
                             }
                         }
                     } catch (error) {
                         console.error(`❌ Error sincronizando nota "${note.title}":`, error);
-                        // Continuar con las siguientes notas
                     }
                 }
                 
                 console.log('✅ Sincronización completada:', results.length, 'notas procesadas');
-                loadingService.hide();
                 
-                // Guardar las notas actualizadas (con IDs del servidor) en localStorage
                 this.saveNotesToLocalStorage(notesMap);
                 
                 if (results.length === notes.length) {
@@ -335,9 +316,7 @@ export class ApiStorage {
             }
         } catch (error) {
             console.error('❌ Error guardando notas:', error);
-            loadingService.hide();
             
-            // En caso de error, siempre guardar localmente
             this.saveNotesToLocalStorage(notesMap);
             
             if (error.isCorsError) {
@@ -346,72 +325,6 @@ export class ApiStorage {
                 notificationService.warning('Notas guardadas localmente (error de sincronización)');
             }
             
-            throw error;
-        }
-    }
-
-    async createNote(noteData) {
-        try {
-            if (this.token && this.currentUserId) {
-                console.log('🆕 Creando nueva nota en servidor:', noteData.title);
-                const result = await this.makeRequest('/notes', {
-                    method: 'POST',
-                    body: noteData
-                });
-                return result.data;
-            } else {
-                // Crear nota local con ID temporal
-                const localNote = {
-                    ...noteData,
-                    id: 'local_' + Date.now(),
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    version: 1
-                };
-                console.log('📝 Creando nota local:', localNote.title);
-                return localNote;
-            }
-        } catch (error) {
-            console.error('❌ Error creando nota:', error);
-            throw error;
-        }
-    }
-
-    async updateNote(noteId, noteData) {
-        try {
-            if (this.token && this.currentUserId && !noteId.startsWith('local_')) {
-                console.log('📝 Actualizando nota en servidor:', noteId);
-                const result = await this.makeRequest(`/notes/${noteId}`, {
-                    method: 'PUT',
-                    body: noteData
-                });
-                return result.data;
-            } else {
-                // Actualizar nota local
-                console.log('📝 Actualizando nota local:', noteId);
-                return { ...noteData, id: noteId, updatedAt: new Date() };
-            }
-        } catch (error) {
-            console.error('❌ Error actualizando nota:', error);
-            throw error;
-        }
-    }
-
-    async deleteNote(noteId) {
-        try {
-            if (this.token && this.currentUserId && !noteId.startsWith('local_')) {
-                console.log('🗑️ Eliminando nota del servidor:', noteId);
-                const result = await this.makeRequest(`/notes/${noteId}`, {
-                    method: 'DELETE'
-                });
-                return result;
-            } else {
-                // Eliminar nota local
-                console.log('🗑️ Eliminando nota local:', noteId);
-                return { success: true, message: 'Nota local eliminada' };
-            }
-        } catch (error) {
-            console.error('❌ Error eliminando nota:', error);
             throw error;
         }
     }
@@ -426,7 +339,6 @@ export class ApiStorage {
                 this.currentUserId = savedUserId;
                 console.log('✅ ApiStorage: Usuario recuperado -', savedUserId);
                 
-                // Si tenemos token pero no user ID, intentar obtenerlo
                 if (this.token && !this.currentUserId && this.supabase) {
                     await this.getCurrentUserInfo();
                 }
@@ -434,7 +346,6 @@ export class ApiStorage {
                 console.log('📱 ApiStorage: No hay usuario autenticado');
             }
             
-            // Verificar conexión con el servidor
             await this.checkConnection();
             
             console.log('✅ ApiStorage: Inicialización completada');
@@ -449,7 +360,6 @@ export class ApiStorage {
         this.supabase = supabase;
         console.log('✅ ApiStorage: Cliente Supabase configurado');
         
-        // Si ya tenemos token, obtener información del usuario
         if (this.token) {
             this.getCurrentUserInfo();
         }
@@ -460,7 +370,7 @@ export class ApiStorage {
             console.log('🔌 Verificando conexión con el servidor...');
             const result = await this.makeRequest('/health');
             this.isOnline = true;
-            this.retryCount = 0; // Reiniciar contador en conexión exitosa
+            this.retryCount = 0;
             console.log('✅ Conexión con servidor: OK');
             return true;
         } catch (error) {
@@ -469,34 +379,6 @@ export class ApiStorage {
             return false;
         }
     }
-
-    // Método para forzar sincronización cuando se recupera la conexión
-    async syncPendingChanges(notesManager) {
-        if (this.isOnline && this.token) {
-            console.log('🔄 Sincronizando cambios pendientes...');
-            try {
-                const notesMap = notesManager.getNotesMap();
-                await this.saveNotes(notesMap);
-                return true;
-            } catch (error) {
-                console.error('❌ Error sincronizando cambios pendientes:', error);
-                return false;
-            }
-        }
-        return false;
-    }
-
-    // Método para limpiar datos específicos de usuario
-    clearUserNotes() {
-        if (this.currentUserId) {
-            const userNotesKey = `mizu_notes_${this.currentUserId}`;
-            localStorage.removeItem(userNotesKey);
-            console.log('🧹 Notas de usuario eliminadas:', userNotesKey);
-        }
-        localStorage.removeItem('mizu_notes');
-        console.log('🧹 Notas locales eliminadas');
-    }
 }
 
-// Exportar instancia singleton
 export const apiStorage = new ApiStorage();

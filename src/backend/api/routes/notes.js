@@ -5,12 +5,12 @@ const router = express.Router();
 const notesController = require('../controllers/notes.controller');
 const authMiddleware = require('../../middleware/auth');
 
-// ⚡️ SOLUCIÓN: Manejar OPTIONS explícitamente antes del middleware de auth
+// 🔧 MANEJAR OPTIONS EXPLÍCITAMENTE PARA /api/notes
 router.options('*', (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.status(204).send();
+    res.status(200).send();
 });
 
 // Rutas protegidas
