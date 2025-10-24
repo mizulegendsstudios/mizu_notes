@@ -88,6 +88,7 @@ export class MizuNotesApp {
         
         this.setupUIEventListeners();
         this.setupAuthUI(); // NUEVO
+        this.setupStorageToggle(); // NUEVO
     }
 
     // NUEVO: Configurar UI de autenticación
@@ -195,7 +196,6 @@ export class MizuNotesApp {
         await this.notesManager.save();
     }
 
-    // ... (el resto de los métodos permanecen igual)
     async createNewNote() {
         const note = this.notesManager.createNote();
         this.notesManager.setCurrentNote(note.id);
@@ -371,35 +371,56 @@ export class MizuNotesApp {
         
         this.showMessage('Modo local activado');
     }
+
+    // Método corregido y movido dentro de la clase
+    setupStorageToggle() {
+        const toggleBtn = document.getElementById('toggleStorageBtn');
+        const modeText = document.getElementById('storageModeText');
+        
+        if (!toggleBtn || !modeText) {
+            console.warn('Botones de toggle de storage no encontrados');
+            return;
+        }
+        
+        toggleBtn.addEventListener('click', async () => {
+            const currentIsApi = this.notesManager.storage.constructor.name === 'ApiStorage';
+            
+            if (currentIsApi) {
+                // Cambiar a LocalStorage
+                this.notesManager.storage = new LocalStorage();
+                modeText.textContent = 'Local';
+                console.log('🔄 Cambiado a modo Local');
+            } else if (this.authManager.isUserAuthenticated()) {
+                // Cambiar a ApiStorage (solo si autenticado)
+                try {
+                    this.notesManager.storage = new ApiStorage();
+                    this.notesManager.storage.setSupabaseClient(this.authManager.auth.supabase);
+                    this.notesManager.storage.setAuthToken(this.authManager.auth.session.access_token);
+                    modeText.textContent = 'Servidor';
+                    console.log('🔄 Cambiado a modo Servidor');
+                } catch (error) {
+                    console.error('Error al cambiar a modo Servidor:', error);
+                    this.showError('Error al cambiar a modo Servidor');
+                    return;
+                }
+            } else {
+                this.showError('Debes estar autenticado para usar el modo Servidor');
+                return;
+            }
+            
+            // Recargar notas con el nuevo storage
+            try {
+                await this.notesManager.loadNotes();
+                this.showMessage(`Modo ${modeText.textContent} activado`);
+            } catch (error) {
+                console.error('Error al recargar notas:', error);
+                this.showError('Error al recargar notas');
+            }
+        });
+    }
 }
 
 // Inicializar la aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
     new MizuNotesApp();
 });
-// En la clase App, después de inicializar todo
-setupStorageToggle() {
-    const toggleBtn = document.getElementById('toggleStorageBtn');
-    const modeText = document.getElementById('storageModeText');
-    
-    toggleBtn.addEventListener('click', () => {
-        const currentIsApi = this.notesManager.storage.constructor.name === 'ApiStorage';
-        
-        if (currentIsApi) {
-            // Cambiar a LocalStorage
-            this.notesManager.storage = new LocalStorage();
-            modeText.textContent = 'Local';
-            console.log('🔄 Cambiado a modo Local');
-        } else if (this.authManager.isAuthenticated) {
-            // Cambiar a ApiStorage (solo si autenticado)
-            this.notesManager.storage = new ApiStorage();
-            this.notesManager.storage.setSupabaseClient(this.authManager.auth.supabase);
-            this.notesManager.storage.setAuthToken(this.authManager.auth.session.access_token);
-            modeText.textContent = 'Servidor';
-            console.log('🔄 Cambiado a modo Servidor');
-        }
-        
-        // Recargar notas con el nuevo storage
-        this.notesManager.loadNotes();
-    });
-}
