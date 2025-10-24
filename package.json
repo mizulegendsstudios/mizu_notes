@@ -10,8 +10,9 @@
     "migrate": "node scripts/db/migrate.js",
     "deploy:backend": "vercel --prod",
     "test:db": "node scripts/db/test-connection.js",
-    "vercel-build": "echo 'Building for Vercel'",
-    "start": "node src/backend/server.js"
+    "vercel-build": "echo 'No build step needed for Node.js'",
+    "start": "node src/backend/server.js",
+    "build": "echo 'No build process needed'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",
