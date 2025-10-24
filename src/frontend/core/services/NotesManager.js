@@ -230,6 +230,18 @@ export class NotesManager {
         });
     }
 
+    // NUEVO: Método que Sidebar necesita
+    getFilteredNotes(searchTerm = '') {
+        // Alias para searchNotes para compatibilidad con Sidebar
+        return this.searchNotes(searchTerm);
+    }
+
+    // NUEVO: Método para obtener preview de nota
+    getNotePreview(note, maxLength = 50) {
+        const content = note.content || '';
+        return content.substring(0, maxLength) + (content.length > maxLength ? '...' : '');
+    }
+
     async exportNotes() {
         try {
             const notesData = this.getNotesArray().map(note => note.toJSON());

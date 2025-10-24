@@ -1,4 +1,4 @@
-// ui/Sidebar.js
+// src/frontend/features/notes/Sidebar.js
 export class Sidebar {
     constructor(notesManager) {
         this.notesManager = notesManager;
@@ -7,6 +7,7 @@ export class Sidebar {
         
         this.initializeElements();
         this.setupEventListeners();
+        this.update(); // Actualizar inmediatamente
     }
 
     initializeElements() {
@@ -25,13 +26,13 @@ export class Sidebar {
             this.update();
         });
 
-        // Suscribirse a cambios del administrador de notas
-        this.notesManager.subscribe('notesLoaded', () => this.update());
+        // Suscribirse a cambios del administrador de notas - EVENTOS CORREGIDOS
+        this.notesManager.subscribe('notesUpdated', () => this.update());
         this.notesManager.subscribe('noteCreated', () => this.update());
         this.notesManager.subscribe('noteUpdated', () => this.update());
         this.notesManager.subscribe('noteDeleted', () => this.update());
-        this.notesManager.subscribe('currentNoteChanged', () => this.update());
-        this.notesManager.subscribe('notesChanged', () => this.update());
+        this.notesManager.subscribe('noteSelected', () => this.update());
+        this.notesManager.subscribe('notesCleared', () => this.update());
     }
 
     update() {
@@ -40,7 +41,8 @@ export class Sidebar {
     }
 
     renderNotesList() {
-        const filteredNotes = this.notesManager.getFilteredNotes(this.searchTerm);
+        // USAR searchNotes EN LUGAR DE getFilteredNotes
+        const filteredNotes = this.notesManager.searchNotes(this.searchTerm);
         
         if (filteredNotes.length === 0) {
             this.showEmptyState();
@@ -56,7 +58,18 @@ export class Sidebar {
     createNoteItem(note) {
         const isActive = note.id === this.notesManager.currentNoteId;
         const title = this.escapeHtml(note.title) || 'Sin título';
-        const preview = this.escapeHtml(note.getPreview());
+        
+        // PREVIEW CORREGIDO - funciona con o sin getPreview()
+        let preview = '';
+        if (note.getPreview && typeof note.getPreview === 'function') {
+            preview = this.escapeHtml(note.getPreview());
+        } else {
+            // Fallback seguro
+            const content = note.content || '';
+            preview = this.escapeHtml(content.substring(0, 50)) + 
+                     (content.length > 50 ? '...' : '');
+        }
+        
         const date = new Date(note.updatedAt).toLocaleDateString();
         
         return `
@@ -87,8 +100,12 @@ export class Sidebar {
 
     updateStats() {
         const stats = this.notesManager.getStats();
-        this.elements.totalNotes.textContent = stats.totalNotes;
-        this.elements.totalChars.textContent = stats.totalChars.toLocaleString();
+        if (this.elements.totalNotes) {
+            this.elements.totalNotes.textContent = stats.totalNotes;
+        }
+        if (this.elements.totalChars) {
+            this.elements.totalChars.textContent = stats.totalChars.toLocaleString();
+        }
     }
 
     selectNote(noteId) {
@@ -109,8 +126,16 @@ export class Sidebar {
     }
 
     clearSearch() {
-        this.elements.searchInput.value = '';
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = '';
+        }
         this.searchTerm = '';
         this.update();
+    }
+
+    // Método para limpiar y resetear
+    destroy() {
+        // Limpiar event listeners si es necesario
+        this.elements = {};
     }
 }
