@@ -1,13 +1,13 @@
-﻿// src/frontend/core/storage/ApiStorage.js - SIN AUTENTICACIÓN TEMPORAL
+﻿// src/frontend/core/storage/ApiStorage.js - CONEXIÓN AL BACKEND FUNCIONAL
 import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
     constructor(baseURL = 'https://mizu-notes-git-gh-pages-mizulegendsstudios-admins-projects.vercel.app/api') {
         this.baseURL = baseURL;
-        // 🔧 NO usar token temporalmente
         this.token = null;
         this.currentUserId = null;
+        this.isOnline = true;
     }
 
     async makeRequest(endpoint, options = {}) {
@@ -15,7 +15,6 @@ export class ApiStorage {
         console.log('🌐 ApiStorage: Haciendo request a', url);
         
         try {
-            // 🔧 NO incluir headers de autorización
             const headers = {
                 'Content-Type': 'application/json',
                 ...options.headers
@@ -24,8 +23,7 @@ export class ApiStorage {
             const fetchOptions = {
                 method: options.method || 'GET',
                 headers,
-                mode: 'cors',
-                credentials: 'omit'
+                mode: 'cors'
             };
 
             if (options.body && typeof options.body === 'object') {
@@ -34,19 +32,18 @@ export class ApiStorage {
 
             console.log('🔧 Fetch config:', {
                 method: fetchOptions.method,
-                endpoint: endpoint,
-                url: url
+                endpoint: endpoint
             });
 
             const response = await fetch(url, fetchOptions);
             console.log('📡 Response status:', response.status, response.statusText);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('✅ Request exitoso:', data.success);
+            console.log('✅ Request exitoso');
             return data;
 
         } catch (error) {
@@ -83,20 +80,25 @@ export class ApiStorage {
             
             console.log('✅ Notas cargadas del servidor:', notesMap.size);
             this.saveNotesToLocalStorage(notesMap);
-            notificationService.success(`Cargadas ${notesMap.size} notas del servidor`);
+            
+            if (notesMap.size > 0) {
+                notificationService.success(`Cargadas ${notesMap.size} notas del servidor`);
+            }
+            
             return notesMap;
             
         } catch (error) {
             console.error('❌ Error obteniendo notas del servidor:', error);
             console.log('📱 Usando notas locales...');
-            notificationService.warning('Usando notas locales (sin conexión)');
+            notificationService.warning('Usando notas locales');
             return this.getLocalNotes();
         }
     }
 
     getLocalNotes() {
         try {
-            const notesData = localStorage.getItem('mizu_notes');
+            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
+            const notesData = localStorage.getItem(userNotesKey);
             
             const notesMap = new Map();
             if (notesData) {
@@ -134,7 +136,8 @@ export class ApiStorage {
                 version: note.version
             }));
             
-            localStorage.setItem('mizu_notes', JSON.stringify(notesArray));
+            const userNotesKey = this.currentUserId ? `mizu_notes_${this.currentUserId}` : 'mizu_notes';
+            localStorage.setItem(userNotesKey, JSON.stringify(notesArray));
             console.log('💾 Notas guardadas en localStorage:', notesArray.length);
             
         } catch (error) {
@@ -206,8 +209,11 @@ export class ApiStorage {
 
     async initialize() {
         console.log('✅ ApiStorage inicializado');
-        // Probar conexión
-        await this.checkConnection();
+        
+        // Probar conexión inmediatamente
+        const connected = await this.checkConnection();
+        this.isOnline = connected;
+        
         return true;
     }
 
@@ -216,22 +222,25 @@ export class ApiStorage {
             console.log('🔌 Verificando conexión con el servidor...');
             const result = await this.makeRequest('/health');
             console.log('✅ Servidor conectado:', result.status);
+            this.isOnline = true;
             notificationService.success('Conectado al servidor');
             return true;
         } catch (error) {
             console.warn('⚠️ Sin conexión con el servidor:', error.message);
+            this.isOnline = false;
             notificationService.error('Sin conexión al servidor');
             return false;
         }
     }
 
-    // 🔧 MÉTODOS VACÍOS TEMPORALMENTE
     setSupabaseClient(supabase) {
-        console.log('✅ Supabase client configurado (sin uso temporal)');
+        this.supabase = supabase;
+        console.log('✅ Supabase client configurado');
     }
 
     setAuthToken(token) {
-        console.log('🔐 Token recibido (sin uso temporal):', token ? 'Sí' : 'No');
+        this.token = token;
+        console.log('🔐 Token configurado');
     }
 }
 
