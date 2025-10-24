@@ -25,15 +25,22 @@
             <button class="toolbar-btn" id="importBtn">
                 📥 Importar
             </button>
+            <!-- Agregar después de los botones existentes -->
+<button class="toolbar-btn" id="toggleStorageBtn" title="Cambiar entre modo local y servidor">
+    🔄 Modo: <span id="storageModeText">Servidor</span>
+</button>
             
             <!-- Botón de Login agregado -->
             <button class="toolbar-btn" id="loginBtn">
                 👤 Login
             </button>
             
+            <!-- Indicador de estado modificado -->
             <div class="status-indicator">
-                <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Conectado</span>
+                <div class="status-dot" id="localStatusDot"></div>
+                <span id="localStatusText">Local: ✓</span>
+                <div class="status-dot" id="serverStatusDot" style="margin-left: 10px;"></div>
+                <span id="serverStatusText">Servidor: ✗</span>
             </div>
         </div>
 

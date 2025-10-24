@@ -448,29 +448,44 @@ export class StyleEngine {
         }
       `,
 
-      // Indicador de estado
+      // Indicador de estado - Actualizado con los estilos solicitados
       statusIndicator: `
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: 8px;
         margin-left: auto;
-        font-size: var(--font-size-sm);
-        color: var(--text-light);
+        font-size: 0.9rem;
       `,
 
       statusDot: `
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: var(--success-color);
-        animation: pulse 2s infinite;
       `,
 
-      statusDotOffline: `
+      // Estados locales
+      statusDotLocalSynced: `
+        background: var(--success-color);
+      `,
+
+      statusDotLocalPending: `
+        background: var(--warning-color);
+      `,
+
+      statusDotLocalError: `
         background: var(--error-color);
       `,
 
-      statusDotSyncing: `
+      // Estados del servidor
+      statusDotServerOnline: `
+        background: var(--success-color);
+      `,
+
+      statusDotServerOffline: `
+        background: var(--error-color);
+      `,
+
+      statusDotServerSyncing: `
         background: var(--warning-color);
       `,
 
@@ -864,8 +879,12 @@ export class StyleEngine {
       toolbarBtnDanger: '.toolbar-btn.danger',
       statusIndicator: '.status-indicator',
       statusDot: '.status-dot',
-      statusDotOffline: '.status-dot.offline',
-      statusDotSyncing: '.status-dot.syncing',
+      statusDotLocalSynced: '.status-dot.local-synced',
+      statusDotLocalPending: '.status-dot.local-pending',
+      statusDotLocalError: '.status-dot.local-error',
+      statusDotServerOnline: '.status-dot.server-online',
+      statusDotServerOffline: '.status-dot.server-offline',
+      statusDotServerSyncing: '.status-dot.server-syncing',
       notesSidebar: '.notes-sidebar',
       notesList: '.notes-list',
       noteItem: '.note-item',

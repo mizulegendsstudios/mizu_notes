@@ -377,3 +377,29 @@ export class MizuNotesApp {
 document.addEventListener('DOMContentLoaded', () => {
     new MizuNotesApp();
 });
+// En la clase App, después de inicializar todo
+setupStorageToggle() {
+    const toggleBtn = document.getElementById('toggleStorageBtn');
+    const modeText = document.getElementById('storageModeText');
+    
+    toggleBtn.addEventListener('click', () => {
+        const currentIsApi = this.notesManager.storage.constructor.name === 'ApiStorage';
+        
+        if (currentIsApi) {
+            // Cambiar a LocalStorage
+            this.notesManager.storage = new LocalStorage();
+            modeText.textContent = 'Local';
+            console.log('🔄 Cambiado a modo Local');
+        } else if (this.authManager.isAuthenticated) {
+            // Cambiar a ApiStorage (solo si autenticado)
+            this.notesManager.storage = new ApiStorage();
+            this.notesManager.storage.setSupabaseClient(this.authManager.auth.supabase);
+            this.notesManager.storage.setAuthToken(this.authManager.auth.session.access_token);
+            modeText.textContent = 'Servidor';
+            console.log('🔄 Cambiado a modo Servidor');
+        }
+        
+        // Recargar notas con el nuevo storage
+        this.notesManager.loadNotes();
+    });
+}
