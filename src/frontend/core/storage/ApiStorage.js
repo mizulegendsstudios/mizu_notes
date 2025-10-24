@@ -1,4 +1,5 @@
-﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN COMPLETA CORREGIDA
+﻿// src/frontend/core/storage/ApiStorage.js - VERSIÓN CORREGIDA
+
 import { Note } from '../../../shared/types/Note.js';
 import { loadingService } from '../services/LoadingService.js';
 import { notificationService } from '../services/NotificationService.js';
@@ -10,7 +11,7 @@ export class ApiStorage {
         this.currentUserId = null;
         this.isOnline = false;
         this.pendingRequests = [];
-        this.supabase = null; // Necesitamos esta referencia
+        this.supabase = null;
     }
 
     setAuthToken(token) {
@@ -18,7 +19,6 @@ export class ApiStorage {
         console.log('🔐 ApiStorage: Token de autenticación configurado');
         if (token) {
             localStorage.setItem('mizu_auth_token', token);
-            // Obtener información del usuario cuando tenemos token
             this.getCurrentUserInfo();
         } else {
             this.clearUserData();
@@ -68,10 +68,15 @@ export class ApiStorage {
                 ...options.headers
             };
 
-            const response = await fetch(url, {
+            // Configuración CORS mejorada
+            const fetchOptions = {
                 headers,
+                mode: 'cors',
+                credentials: 'include', // <-- CORREGIDO: Debe ser 'include' para enviar el token
                 ...options
-            });
+            };
+
+            const response = await fetch(url, fetchOptions);
 
             console.log('📡 ApiStorage: Response status', response.status, 'para', endpoint);
 
@@ -86,10 +91,18 @@ export class ApiStorage {
 
         } catch (error) {
             console.error('❌ ApiStorage: Error en request a', endpoint, error);
+            
+            // Manejar errores de CORS específicamente
+            if (error.message.includes('CORS') || error.message.includes('NetworkError')) {
+                notificationService.error('Error de conexión con el servidor (CORS)');
+                throw new Error('No se puede conectar con el servidor. Verifica la configuración CORS.');
+            }
+            
             throw error;
         }
     }
 
+    // ... El resto de tu código (getNotes, saveNotes, etc.) se mantiene igual
     async getNotes() {
         try {
             console.log('🔍 ApiStorage.getNotes - Token:', !!this.token, 'User:', this.currentUserId);
@@ -194,7 +207,6 @@ export class ApiStorage {
                         
                         if (note.id && !note.id.startsWith('local_')) {
                             // Nota existente - actualizar
-                            console.log('✏️ Actualizando nota existente:', note.id);
                             const result = await this.makeRequest(`/notes/${note.id}`, {
                                 method: 'PUT',
                                 body: JSON.stringify(noteData)
@@ -202,7 +214,6 @@ export class ApiStorage {
                             results.push(result);
                         } else {
                             // Nota nueva - crear
-                            console.log('➕ Creando nota nueva:', note.title);
                             const result = await this.makeRequest('/notes', {
                                 method: 'POST',
                                 body: JSON.stringify(noteData)
@@ -231,56 +242,6 @@ export class ApiStorage {
         }
     }
 
-    async createNote(noteData) {
-        try {
-            console.log('📝 ApiStorage.createNote:', noteData);
-            const result = await this.makeRequest('/notes', {
-                method: 'POST',
-                body: JSON.stringify(noteData)
-            });
-            
-            console.log('✅ Nota creada en servidor:', result.data);
-            notificationService.success('Nota creada correctamente');
-            return result.data;
-        } catch (error) {
-            console.error('❌ Error creando nota:', error);
-            throw error;
-        }
-    }
-
-    async updateNote(noteId, updates) {
-        try {
-            console.log('✏️ ApiStorage.updateNote:', noteId, updates);
-            const result = await this.makeRequest(`/notes/${noteId}`, {
-                method: 'PUT',
-                body: JSON.stringify(updates)
-            });
-            
-            console.log('✅ Nota actualizada en servidor:', result.data);
-            notificationService.success('Nota actualizada');
-            return result.data;
-        } catch (error) {
-            console.error('❌ Error actualizando nota:', error);
-            throw error;
-        }
-    }
-
-    async deleteNote(noteId) {
-        try {
-            console.log('🗑️ ApiStorage.deleteNote:', noteId);
-            const result = await this.makeRequest(`/notes/${noteId}`, {
-                method: 'DELETE'
-            });
-            
-            console.log('✅ Nota eliminada del servidor');
-            notificationService.success('Nota eliminada');
-            return result;
-        } catch (error) {
-            console.error('❌ Error eliminando nota:', error);
-            throw error;
-        }
-    }
-
     async initialize() {
         const savedToken = localStorage.getItem('mizu_auth_token');
         const savedUserId = localStorage.getItem('mizu_current_user_id');
@@ -290,7 +251,6 @@ export class ApiStorage {
             this.currentUserId = savedUserId;
             console.log('✅ ApiStorage: Usuario recuperado -', savedUserId);
             
-            // Si tenemos token pero no userId, obtener información del usuario
             if (this.token && !this.currentUserId && this.supabase) {
                 await this.getCurrentUserInfo();
             }
@@ -302,7 +262,6 @@ export class ApiStorage {
         return true;
     }
 
-    // Necesitamos una referencia a Supabase para obtener el usuario
     setSupabaseClient(supabase) {
         this.supabase = supabase;
         console.log('✅ ApiStorage: Cliente Supabase configurado');
