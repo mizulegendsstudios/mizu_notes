@@ -1,6 +1,7 @@
 ﻿// src/backend/middleware/auth.js - Middleware de autenticación con Supabase
-// ÚLTIMO CAMBIO: 2025-10-28 - Solución Reina Violeta - UUID real de Supabase
+// ÚLTIMO CAMBIO: 2025-10-28 - Solución Definitiva Híbrida - Mejor manejo de tokens y errores
 // IMPORTANCIA: CRÍTICO para seguridad - valida tokens de Supabase Auth
+// COMPATIBILIDAD: Supabase Auth, Express, Vercel Functions
 
 const { supabase } = require('../../lib/supabase');
 
@@ -12,7 +13,11 @@ async function authMiddleware(req, res, next) {
     // Extraer token del header Authorization
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Falta token' });
+      console.log('❌ Falta token o formato incorrecto:', authHeader);
+      return res.status(401).json({ 
+        error: 'Falta token de autenticación',
+        hint: 'Formato: Authorization: Bearer <token>'
+      });
     }
 
     const token = authHeader.substring(7);
@@ -21,8 +26,11 @@ async function authMiddleware(req, res, next) {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      console.log('❌ Token inválido:', error?.message);
-      return res.status(401).json({ error: 'Token inválido' });
+      console.log('❌ Token inválido:', error?.message || 'Usuario no encontrado');
+      return res.status(401).json({ 
+        error: 'Token inválido o expirado',
+        hint: 'Por favor, inicia sesión nuevamente'
+      });
     }
 
     // ✅ Usuario REAL de Supabase - UUID que va en notes.user_id
@@ -33,10 +41,14 @@ async function authMiddleware(req, res, next) {
       username: user.user_metadata?.username || user.email.split('@')[0]
     };
 
+    console.log('✅ Usuario autenticado:', req.user.email);
     next();
   } catch (err) {
-    console.error('❌ Auth middleware:', err);
-    res.status(500).json({ error: 'Error interno' });
+    console.error('❌ Auth middleware error:', err);
+    res.status(500).json({ 
+      error: 'Error interno de autenticación',
+      message: err.message
+    });
   }
 }
 

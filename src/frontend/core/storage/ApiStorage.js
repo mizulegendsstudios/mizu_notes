@@ -1,13 +1,14 @@
 ﻿// src/frontend/core/storage/ApiStorage.js - API Storage con autenticación Supabase
-// ÚLTIMO CAMBIO: 2025-10-28 - Solución Reina Violeta - Token real de Supabase
+// ÚLTIMO CAMBIO: 2025-10-28 - Solución Definitiva Híbrida - Mejor gestión de tokens y errores
 // IMPORTANCIA: CRÍTICO para sincronización backend/frontend + autenticación
+// COMPATIBILIDAD: GitHub Pages, Vercel, Supabase Auth, Fetch API
 
 import { Note } from '../../../shared/types/Note.js';
 import { notificationService } from '../services/NotificationService.js';
 
 export class ApiStorage {
     constructor() {
-        // 🟣 URL del backend en Vercel - CRÍTICO que coincida con tu despliegue
+        // 🌟 URL del backend en Vercel - CRÍTICO que coincida con tu despliegue
         this.baseURL = 'https://mizu-notes-git-gh-pages-mizulegendsstudios-admins-projects.vercel.app/api';
         this.isOnline = false;
         console.log('🚀 ApiStorage con URL:', this.baseURL);
@@ -18,34 +19,64 @@ export class ApiStorage {
      * @returns {Object} Headers con token de autorización
      */
     getAuthHeaders() {
-        // 🔐 Obtener token real de Supabase desde localStorage
-        // RAZÓN: Supabase guarda el token en localStorage bajo esta clave
-        const authData = localStorage.getItem('supabase.auth.token');
+        // 🔐 Múltiples fuentes para obtener el token de Supabase
+        // RAZÓN: Supabase puede guardar el token en diferentes claves según la versión
+        let token = null;
         
-        if (!authData) {
-            console.warn('⚠️ No hay token de Supabase en localStorage');
-            return { 'Content-Type': 'application/json' };
-        }
-
-        try {
-            const parsed = JSON.parse(authData);
-            const token = parsed?.access_token;
-            
-            if (!token) {
-                console.warn('⚠️ Token de acceso no encontrado en authData');
-                return { 'Content-Type': 'application/json' };
+        // Intentar obtener el token de las diferentes claves posibles
+        const authData = localStorage.getItem('supabase.auth.token');
+        const sessionData = localStorage.getItem('supabase.auth.session');
+        
+        if (authData) {
+            try {
+                const parsed = JSON.parse(authData);
+                token = parsed?.access_token;
+            } catch (error) {
+                console.error('❌ Error parseando authData:', error);
             }
-
-            console.log('🔐 Token de Supabase obtenido:', token.substring(0, 10) + '...');
-            
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            };
-        } catch (error) {
-            console.error('❌ Error parseando token de Supabase:', error);
+        }
+        
+        if (!token && sessionData) {
+            try {
+                const parsed = JSON.parse(sessionData);
+                token = parsed?.access_token;
+            } catch (error) {
+                console.error('❌ Error parseando sessionData:', error);
+            }
+        }
+        
+        // Último recurso: buscar directamente en localStorage
+        if (!token) {
+            // Buscar en todas las claves de localStorage que puedan contener el token
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('supabase') && key.includes('token')) {
+                    try {
+                        const value = localStorage.getItem(key);
+                        const parsed = JSON.parse(value);
+                        if (parsed?.access_token) {
+                            token = parsed.access_token;
+                            console.log('🔐 Token encontrado en:', key);
+                            break;
+                        }
+                    } catch (error) {
+                        // Ignorar errores de parseo
+                    }
+                }
+            }
+        }
+        
+        if (!token) {
+            console.warn('⚠️ No se encontró token de Supabase en localStorage');
             return { 'Content-Type': 'application/json' };
         }
+
+        console.log('🔐 Token de Supabase obtenido:', token.substring(0, 10) + '...');
+        
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
     }
 
     /**
@@ -95,7 +126,7 @@ export class ApiStorage {
             // Manejo específico de errores de red
             if (error.message === 'UNAUTHORIZED') {
                 // Limpiar token inválido
-                localStorage.removeItem('supabase.auth.token');
+                this.clearSupabaseTokens();
                 throw error;
             }
             
@@ -107,6 +138,24 @@ export class ApiStorage {
             
             throw error;
         }
+    }
+
+    /**
+     * Limpia todos los tokens de Supabase del localStorage
+     */
+    clearSupabaseTokens() {
+        // Limpiar todas las claves relacionadas con Supabase
+        const keysToRemove = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('supabase')) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('🧹 Tokens de Supabase limpiados:', keysToRemove.length);
     }
 
     /**

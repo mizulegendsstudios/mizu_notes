@@ -1,32 +1,48 @@
 ﻿// src/backend/server.js - Handler principal de Vercel + Express
-// ÚLTIMO CAMBIO: 2025-10-28 - Solución Reina Violeta - CORS exacto para GitHub Pages
+// ÚLTIMO CAMBIO: 2025-10-28 - Solución Definitiva Híbrida - CORS flexible + diagnóstico mejorado
 // IMPORTANCIA: Vital para Vercel (entry point), Express (servidor), CORS (seguridad cross-origin)
+// COMPATIBILIDAD: Node.js, Express, Vercel Functions, GitHub Pages
 
 const express = require('express');
 const app = express();
 
-// 🟣 CORS REAL para GitHub Pages - Solución Reina Violeta
-// DOMINIO REAL: https://mizulegendsstudios.github.io/mizu_notes/
-// RAZÓN: El navegador bloquea requests cross-origin sin estos headers exactos
+// 🌟 CORS FLEXIBLE - Solución Definitiva Híbrida
+// DOMINIO REAL: https://mizulegendsstudios.github.io/mizu-notes/
+// RAZÓN: Permitir múltiples orígenes durante desarrollo y producción
+// IMPORTANCIA: Vital para GitHub Pages (frontend) y Vercel (backend)
 app.use((req, res, next) => {
-  // ⚠️ CRÍTICO: Debe coincidir EXACTAMENTE con tu URL de GitHub Pages
-  const allowedOrigin = 'https://mizulegendsstudios.github.io/mizu_notes/';
+  // Lista de orígenes permitidos para mayor flexibilidad
+  const allowedOrigins = [
+    'https://mizulegendsstudios.github.io/mizu-notes',
+    'https://mizulegendsstudios.github.io',
+    'http://localhost:3000',
+    'https://localhost:3000'
+  ];
   
-  res.header('Access-Control-Allow-Origin', allowedOrigin);
+  const origin = req.headers.origin;
+  
+  // Verificar si el origen está en la lista de permitidos
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
   
   // Preflight request - importante para POST/PUT/DELETE
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// 🔐 LOG DEL TOKEN - Diagnóstico para Vercel
+// 🔐 LOG DETALLADO DEL TOKEN - Diagnóstico mejorado para Vercel
 // RAZÓN: Vercel Functions no muestran headers por defecto en logs
 // IMPORTANCIA: Vital para debuggear autenticación en producción
 app.use((req, res, next) => {
-  console.log('🔐 Authorization:', req.headers.authorization);
+  const authHeader = req.headers.authorization;
+  console.log('🔐 Authorization:', authHeader ? authHeader.substring(0, 20) + '...' : 'NONE');
+  console.log('🌐 Origin:', req.headers.origin);
+  console.log('📍 Path:', req.path);
   next();
 });
 
@@ -49,9 +65,21 @@ try {
   console.error('❌ Error cargando rutas:', e);
 }
 
-// Endpoints de debug - ÚTILES para health checks
-app.get('/api/health', (_, res) => res.json({ status: 'OK', ts: new Date() }));
-app.get('/api/debug', (_, res) => res.json({ msg: 'Vercel handler OK', ts: new Date() }));
+// Endpoints de debug mejorados - ÚTILES para health checks
+app.get('/api/health', (_, res) => res.json({ 
+  status: 'OK', 
+  ts: new Date(),
+  version: '2.0.0 - Solución Definitiva Híbrida'
+}));
+
+app.get('/api/debug', (req, res) => {
+  res.json({ 
+    msg: 'Vercel handler OK', 
+    ts: new Date(),
+    headers: req.headers,
+    origin: req.headers.origin
+  });
+});
 
 // 404 handler - BUENA PRÁCTICA
 app.use('*', (req, res) => res.status(404).json({ error: 'Not found' }));

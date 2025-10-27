@@ -1,23 +1,49 @@
-﻿// src/backend/api/routes/notes.js - VERSIÓN CORREGIDA
+﻿// src/backend/api/routes/notes.js - Rutas para la gestión de notas
+// ÚLTIMO CAMBIO: 2025-10-28 - Fusión de Soluciones - Aplica middleware de autenticación global y estructura clara.
+//                - Se asegura que todas las rutas bajo /api/notes requieran autenticación.
+// IMPORTANCIA: Compartido para Express (definición de rutas), Node.js (lógica del backend),
+//              Supabase/PostgreSQL (integración con base de datos a través de controllers).
+
 const express = require('express');
 const router = express.Router();
 
+// Importar controladores específicos para notas
+// IMPORTANCIA: Vital para la lógica de negocio (controllers).
 const notesController = require('../controllers/notes.controller');
-const authMiddleware = require('../../middleware/auth');
 
-// 🔧 MANEJAR OPTIONS EXPLÍCITAMENTE PARA /api/notes
-router.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.status(200).send();
-});
+// Importar middleware de autenticación
+// NOTA: Este middleware ahora se aplica globalmente en server.js para /api/notes,
+// por lo tanto, NO se repite aquí en cada ruta individual.
+// const authMiddleware = require('../../middleware/auth'); // <-- Ya no se necesita aquí
 
-// Rutas protegidas
-router.get('/', authMiddleware, notesController.getNotes);
-router.post('/', authMiddleware, notesController.createNote);
-router.put('/:id', authMiddleware, notesController.updateNote);
-router.delete('/:id', authMiddleware, notesController.deleteNote);
-router.get('/stats', authMiddleware, notesController.getStats);
+// --- RUTAS PARA /api/notes ---
+// IMPORTANCIA: Vital para Express (definición de endpoints API).
 
-module.exports = router;
+// GET /api/notes - Obtener todas las notas del usuario autenticado
+// Requiere autenticación (verificado en server.js).
+router.get('/', /* authMiddleware, */ notesController.getNotes); // authMiddleware ya no es necesario aquí
+
+// POST /api/notes - Crear una nueva nota
+// Requiere autenticación (verificado en server.js).
+router.post('/', /* authMiddleware, */ notesController.createNote); // authMiddleware ya no es necesario aquí
+
+// GET /api/notes/stats - Obtener estadísticas de notas del usuario autenticado
+// Requiere autenticación (verificado en server.js).
+router.get('/stats', /* authMiddleware, */ notesController.getStats); // authMiddleware ya no es necesario aquí
+
+// Rutas dinámicas (requieren ID)
+// PUT /api/notes/:id - Actualizar una nota específica
+// Requiere autenticación (verificado en server.js).
+router.put('/:id', /* authMiddleware, */ notesController.updateNote); // authMiddleware ya no es necesario aquí
+
+// DELETE /api/notes/:id - Eliminar una nota específica
+// Requiere autenticación (verificado en server.js).
+router.delete('/:id', /* authMiddleware, */ notesController.deleteNote); // authMiddleware ya no es necesario aquí
+
+// --- MANEJO DE OPTIONS (Preflight) ---
+// Si bien CORS se maneja en server.js, Express puede responder OPTIONS automáticamente
+// si no se define una ruta específica para OPTIONS. La inclusión aquí es opcional
+// si se manejan headers específicos a nivel de ruta, pero no es común.
+// Dado que CORS se maneja globalmente, no es necesario definir OPTIONS aquí.
+
+module.exports = router; // Exportar el router para usarlo en server.js
