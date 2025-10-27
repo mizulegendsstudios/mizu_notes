@@ -1,58 +1,62 @@
-﻿// src/backend/server.js - Vercel handler + CORS GH-Pages + log token
+﻿// src/backend/server.js - Handler principal de Vercel + Express
+// ÚLTIMO CAMBIO: 2025-10-28 - Solución Reina Violeta - CORS exacto para GitHub Pages
+// IMPORTANCIA: Vital para Vercel (entry point), Express (servidor), CORS (seguridad cross-origin)
+
 const express = require('express');
 const app = express();
 
-// 1️⃣ CORS explícito para GitHub Pages
+// 🟣 CORS REAL para GitHub Pages - Solución Reina Violeta
+// DOMINIO REAL: https://mizulegendsstudios.github.io/mizu_notes/
+// RAZÓN: El navegador bloquea requests cross-origin sin estos headers exactos
 app.use((req, res, next) => {
-  const allowed = 'https://mizulegendsstudios.github.io'; // <-- tu GH Pages
-  res.header('Access-Control-Allow-Origin', allowed);
+  // ⚠️ CRÍTICO: Debe coincidir EXACTAMENTE con tu URL de GitHub Pages
+  const allowedOrigin = 'https://mizulegendsstudios.github.io/mizu_notes/';
+  
+  res.header('Access-Control-Allow-Origin', allowedOrigin);
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  
+  // Preflight request - importante para POST/PUT/DELETE
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// 2️⃣ Log del Authorization que recibe Vercel
+// 🔐 LOG DEL TOKEN - Diagnóstico para Vercel
+// RAZÓN: Vercel Functions no muestran headers por defecto en logs
+// IMPORTANCIA: Vital para debuggear autenticación en producción
 app.use((req, res, next) => {
-  console.log('🔐 Authorization header:', req.headers.authorization);
+  console.log('🔐 Authorization:', req.headers.authorization);
   next();
 });
 
-// 3️⃣ Body parser
+// Body parser - ESENCIAL para JSON
+// IMPORTANCIA: Necesario para req.body en POST/PUT
 app.use(express.json());
 
-// 4️⃣ Logging general
+// Logging general - UTIL para debug
 app.use((req, res, next) => {
-  console.log(`🔧 ${req.method} ${req.path} - Headers:`, req.headers);
+  console.log(`🔧 ${req.method} ${req.path}`);
   next();
 });
 
-// 5️⃣ Cargar rutas con try/catch
+// Rutas con manejo de errores - CRÍTICO para estabilidad
+// IMPORTANCIA: Evita crash de Vercel si una ruta falla
 try {
-  console.log('🔧 Cargando /api/auth');
   app.use('/api/auth', require('./api/routes/auth'));
-  console.log('✅ /api/auth cargado');
-} catch (e) {
-  console.error('❌ /api/auth falló:', e.message);
-}
-
-try {
-  console.log('🔧 Cargando /api/notes');
   app.use('/api/notes', require('./api/routes/notes'));
-  console.log('✅ /api/notes cargado');
 } catch (e) {
-  console.error('❌ /api/notes falló:', e.message);
+  console.error('❌ Error cargando rutas:', e);
 }
 
-// 6️⃣ Endpoints de debug
+// Endpoints de debug - ÚTILES para health checks
 app.get('/api/health', (_, res) => res.json({ status: 'OK', ts: new Date() }));
 app.get('/api/debug', (_, res) => res.json({ msg: 'Vercel handler OK', ts: new Date() }));
 
-// 7️⃣ 404 catch-all
-app.use('*', (req, res) => res.status(404).json({ error: 'Not found', path: req.originalUrl }));
+// 404 handler - BUENA PRÁCTICA
+app.use('*', (req, res) => res.status(404).json({ error: 'Not found' }));
 
-// 8️⃣ Safe-guards
+// Safe-guards - CRÍTICO para Node.js
 process.on('uncaughtException', (e) => console.error('❌ uncaught:', e));
 process.on('unhandledRejection', (r) => console.error('❌ unhandled:', r));
 
