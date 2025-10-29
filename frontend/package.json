@@ -1,0 +1,12 @@
+{
+  "name": "notepad-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "node build.js --watch",
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "typescript": "^5.5.0"
+  }
+}

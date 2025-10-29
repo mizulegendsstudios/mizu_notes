@@ -1,0 +1,22 @@
+{
+  "name": "mizu-notes-katana-v7",
+  "version": "1.0.0",
+  "description": "Mizu Notes implementado con arquitectura KATANA v7",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:app\"",
+    "dev:api": "cd api && npm run dev",
+    "dev:app": "npm run build:watch && npx serve app",
+    "build": "npm run build:app && npm run build:api",
+    "build:app": "node esbuild.js",
+    "build:watch": "node esbuild.js --watch",
+    "build:api": "cd api && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.0.0",
+    "esbuild": "^0.19.0",
+    "serve": "^14.0.0",
+    "typescript": "^5.0.0"
+  }
+}
