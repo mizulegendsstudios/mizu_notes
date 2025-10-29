@@ -1,38 +1,22 @@
 {
-  "name": "mizu-notes",
+  "name": "mizu-notes-katana-v7",
   "version": "1.0.0",
-  "description": "Mizu Notes - Bloc de notas offline-first con Katana Framework",
-  "main": "src/backend/server.js",
+  "description": "Mizu Notes implementado con arquitectura KATANA v7",
+  "type": "module",
   "scripts": {
-    "dev:frontend": "echo 'Abrir index.html en servidor local'",
-    "dev:backend": "node src/backend/server.js",
-    "dev:backend:watch": "nodemon src/backend/server.js",
-    "migrate": "node scripts/db/migrate.js",
-    "deploy:backend": "vercel --prod",
-    "test:db": "node scripts/db/test-connection.js",
-    "vercel-build": "echo 'No build step needed for Node.js'",
-    "start": "node src/backend/server.js",
-    "build": "echo 'No build process needed'"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.38.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.0",
-    "express": "^4.18.0",
-    "express-rate-limit": "^6.8.1",
-    "helmet": "^7.0.0",
-    "pg": "^8.11.0"
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:app\"",
+    "dev:api": "cd api && npm run dev",
+    "dev:app": "npm run build:watch && npx serve app",
+    "build": "npm run build:app && npm run build:api",
+    "build:app": "node esbuild.js",
+    "build:watch": "node esbuild.js --watch",
+    "build:api": "cd api && npm run build"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
-  },
-  "keywords": [
-    "notes",
-    "offline-first",
-    "postgresql",
-    "supabase",
-    "katana-framework"
-  ],
-  "author": "Mizu Legends Studios",
-  "license": "AGPL-3.0"
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.0.0",
+    "esbuild": "^0.19.0",
+    "serve": "^14.0.0",
+    "typescript": "^5.0.0"
+  }
 }
